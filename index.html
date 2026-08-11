@@ -59,7 +59,7 @@
     .cards { margin-left: -12px; overflow: hidden; }
     .card-wrap { float: left; width: 50%; padding: 0 0 12px 12px; }
     .card {
-      min-height: 225px;
+      min-height: 270px;
       padding: 20px;
       background: #fffdf8;
       border: 1px solid #d6cfc2;
@@ -68,8 +68,9 @@
     }
     .card.selected { border-color: #17352d; box-shadow: inset 0 0 0 2px #17352d; }
     .card-top { min-height: 36px; }
-    .result-tag {
+    .result-tag, .format-tag {
       display: inline-block;
+      margin: 0 5px 5px 0;
       padding: 4px 8px;
       border-radius: 4px;
       background: #e8e1d5;
@@ -79,8 +80,10 @@
       letter-spacing: .07em;
       text-transform: uppercase;
     }
+    .format-tag { background: #dce9e3; color: #234a3f; }
     .card h3 { margin: 10px 0 7px; font-size: 21px; }
     .card p { margin: 0; color: #59635f; font-size: 15px; }
+    .card .card-outcome { margin-top: 12px; color: #2f3d38; }
     .add-button {
       width: 100%;
       margin-top: 17px;
@@ -129,7 +132,10 @@
     .progress { float: right; padding-top: 9px; color: #56635e; font-weight: bold; }
     .routine-panel { max-width: 720px; margin: 0 auto; padding: 30px; background: #fffdf8; border: 1px solid #d4ccbe; border-radius: 14px; }
     .routine-panel h1 { margin-bottom: 10px; }
-    .instructions { margin: 20px 0; padding: 18px; background: #eee8dd; border-left: 5px solid #d39c49; white-space: pre-line; }
+    .rules { margin: 22px 0; }
+    .rule { margin-bottom: 10px; padding: 15px 16px; background: #eee8dd; border-left: 5px solid #d39c49; }
+    .rule h3 { margin: 0 0 5px; color: #17352d; font-size: 16px; }
+    .rule p { margin: 0; color: #414d48; font-size: 15px; }
     .timer-box { margin: 22px 0; padding: 20px; text-align: center; background: #17352d; color: #fff; border-radius: 10px; }
     .timer { font-family: "Courier New", monospace; font-size: 52px; line-height: 1; letter-spacing: .03em; }
     .timer-controls { margin-top: 17px; }
@@ -196,7 +202,12 @@
         <p id="playCategory" class="eyebrow"></p>
         <h1 id="playTitle"></h1>
         <p id="playDescription"></p>
-        <div id="playInstructions" class="instructions"></div>
+        <div class="rules">
+          <div class="rule"><h3>Set up</h3><p id="playSetup"></p></div>
+          <div class="rule"><h3>How to play</h3><p id="playRules"></p></div>
+          <div class="rule"><h3>When it ends</h3><p id="playFinish"></p></div>
+          <div class="rule"><h3>Result</h3><p id="playOutcome"></p></div>
+        </div>
 
         <div id="timerBox" class="timer-box hidden">
           <div id="timerDisplay" class="timer">00:00</div>
@@ -234,161 +245,231 @@
           id: "twelve-dart-targets",
           category: "Scoring",
           title: "12-Dart Targets",
-          description: "A clear scoring benchmark across the main scoring targets.",
-          instructions: "Throw 12 darts at 20, then 12 at 19, 12 at 18 and 12 at Bull. Only darts in the nominated segment score. Add the four block scores together.",
+          description: "A fixed-dart benchmark across four important scoring targets.",
+          format: "48 darts",
+          setup: "Play four blocks in this order: 20, 19, 18 and Bull. Each block is 12 darts (four visits).",
+          rules: "Only darts in the nominated segment count. Singles, doubles and trebles score their normal face value. On Bull, outer Bull scores 25 and inner Bull scores 50. Every dart outside the target scores zero. Keep one total for each block.",
+          finish: "The routine ends after the 48th dart. There is no time limit and no failure state.",
+          outcome: "Add the four block scores together. Record the combined score; a higher score than your previous attempt is the goal.",
           resultLabel: "Combined score",
-          resultHint: "Enter the total from all four targets",
-          timer: false
+          resultHint: "Enter the total from all four blocks",
+          timerMode: false
         },
         {
           id: "around-clock-singles",
           category: "Scoring",
           title: "Around the Clock Singles",
-          description: "Move around the whole board and record your finishing time.",
-          instructions: "Start at 1 and hit each number in order through 20, then finish on Bull. Singles, doubles and trebles all count. Stop the timer when Bull is hit.",
+          description: "Complete the numbered board and Bull as quickly as possible.",
+          format: "Stopwatch",
+          setup: "Start on 1. Your target order is 1, 2, 3 and so on through 20, followed by Bull.",
+          rules: "Any part of the current numbered segment counts: single, double or treble. When you hit the target, move immediately to the next number; unused darts in the visit may be thrown at the next target. For the final target, either outer or inner Bull completes the routine.",
+          finish: "The routine ends only when Bull is hit. Stop the stopwatch immediately. There is no time limit, so every attempt produces a completion time.",
+          outcome: "Record the completion time. Lower is better.",
           resultLabel: "Completion time",
-          resultHint: "Use the timer or enter a time, for example 08:42",
-          timer: true
+          resultHint: "Use the stopwatch or enter a time such as 08:42",
+          timerMode: "stopwatch",
+          autoTimeResult: true
         },
         {
           id: "straight-20-19",
           category: "Scoring",
           title: "Straight 20s & 19s",
-          description: "Test how long your darts stay in the intended segment.",
-          instructions: "On 20: single scores 1 and treble scores 3. A dart outside the 20 segment ends the run. Play five runs, then repeat on 19. Record the best streak from either target.",
-          resultLabel: "Best streak",
-          resultHint: "Enter your best run score",
-          timer: false
+          description: "Measure how long your throw remains in one scoring corridor.",
+          format: "10 runs",
+          setup: "Play five runs on the 20 segment, then five runs on the 19 segment. Begin every run at zero.",
+          rules: "A single in the target scores 1 mark, a double scores 2 and a treble scores 3. Continue throwing while every dart stays in the target segment. A dart in a neighbouring number, a miss or a bounce-out ends that run immediately.",
+          finish: "The routine ends after five completed runs on 20 and five completed runs on 19.",
+          outcome: "Record the highest single run from the ten attempts. Higher is better; try to beat your previous best streak.",
+          resultLabel: "Best run",
+          resultHint: "Enter the highest mark total from one run",
+          timerMode: false
         },
         {
           id: "24-dart-high-score",
           category: "Scoring",
           title: "24-Dart High Score",
-          description: "Measure sustained scoring rather than one lucky visit.",
-          instructions: "Score normally with 24 darts (8 visits). Complete three rounds. Put the three scores in order and record the middle score.",
+          description: "Use three full scoring rounds to reduce the effect of one lucky visit.",
+          format: "72 darts",
+          setup: "Play three separate rounds. Each round is 24 darts (eight visits) scored exactly as you would score in a leg of 501.",
+          rules: "Aim at your normal scoring target and use normal board values. You may switch targets for a blocked bed or cover shot. Keep a total for each 24-dart round, then write the three totals from lowest to highest.",
+          finish: "The routine ends after all three 24-dart rounds are complete.",
+          outcome: "Record the middle of the three totals (the median), not the highest. A higher median than your previous session is the goal.",
           resultLabel: "Median score",
-          resultHint: "Enter the middle of your three scores",
-          timer: false
+          resultHint: "Enter the middle of your three round totals",
+          timerMode: false
         },
         {
           id: "cricket-scoring",
           category: "Scoring",
           title: "Cricket Scoring",
-          description: "Switch between useful targets and count accurate darts.",
-          instructions: "Throw three darts at each of 15, 16, 17, 18, 19, 20 and Bull. Singles score 1, doubles 2 and trebles 3. Outer Bull scores 1 and inner Bull scores 2.",
-          resultLabel: "Total marks out of 63",
+          description: "A 21-dart switching test on the main Cricket targets.",
+          format: "21 darts",
+          setup: "Throw one visit (three darts) at each target in this order: 15, 16, 17, 18, 19, 20 and Bull.",
+          rules: "On 15–20, a single scores 1 mark, a double 2 and a treble 3. On Bull, outer Bull scores 1 and inner Bull scores 2. Darts outside the nominated target score zero.",
+          finish: "The routine ends after the three darts at Bull. The maximum possible score is 60 marks.",
+          outcome: "Add all seven target totals and record the result out of 60. Higher is better.",
+          resultLabel: "Marks out of 60",
           resultHint: "Enter your total marks",
-          timer: false
+          timerMode: false
         },
         {
           id: "round-board-hits",
           category: "Scoring",
           title: "Round the Board Hits",
-          description: "A low-pressure accuracy score across every segment.",
-          instructions: "Throw one visit at each number from 1 to 20, then Bull. Singles score 1, doubles 2 and trebles 3. Outer Bull scores 1 and inner Bull scores 2.",
-          resultLabel: "Total marks",
-          resultHint: "Enter your final total",
-          timer: false
+          description: "Score accuracy while moving clockwise around the physical board.",
+          format: "60 darts",
+          setup: "Follow the board clockwise, not numerical order: 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5, 20. Bull is not included.",
+          rules: "Throw one full visit at every target. A single in the nominated segment scores 1 mark, a double 2 and a treble 3. Darts in any other segment score zero.",
+          finish: "The routine ends after the visit at 20: 20 targets and 60 darts. The maximum score is 180 marks.",
+          outcome: "Record the total marks. The source routine gives 50 as a starter benchmark; 50 or more is a completed benchmark.",
+          resultLabel: "Marks out of 180",
+          resultHint: "Enter your final mark total",
+          timerMode: false
         },
         {
           id: "around-clock-doubles",
           category: "Doubles",
           title: "Around the Clock Doubles",
-          description: "Cover every double against a 20-minute clock.",
-          instructions: "Start at D1 and move through D20, then Bull. Hit the current double to advance. Finish early and record the time; if 20 minutes expires, record the last double completed.",
-          resultLabel: "Time or last double completed",
+          description: "Race through the full double ring before the clock expires.",
+          format: "20-minute limit",
+          setup: "Start on D1. Work in numerical order through D20, then finish on inner Bull (50). Set the countdown to 20 minutes.",
+          rules: "Only the exact double counts. A single or treble of the same number is a miss. When a double is hit, move immediately to the next target; unused darts may be thrown at that next double.",
+          finish: "Win by hitting inner Bull before the countdown reaches 00:00. If time expires first, the attempt ends and the routine is not completed.",
+          outcome: "On a win, record the finishing time. On timeout, record the last double completed, such as D14. Progress farther or finish faster next time.",
+          resultLabel: "Finish time or last double",
           resultHint: "For example 16:24 or D14",
-          timer: true
-        },
-        {
-          id: "double-tap",
-          category: "Doubles",
-          title: "Double Tap",
-          description: "Two visits at each double, working down the board.",
-          instructions: "Start on D20 and work down to D1. Take two visits (six darts) at each double. A hit moves you to the next double; if both visits miss, stay on the same double. Record the last double completed.",
-          resultLabel: "Last double completed",
-          resultHint: "For example D12",
-          timer: false
+          timerMode: "countdown",
+          limitSeconds: 1200,
+          autoTimeResult: true,
+          timeoutMessage: "Time is up. Enter the last double you completed."
         },
         {
           id: "one-at-double",
           category: "Doubles",
           title: "One at the Double",
-          description: "One match-like chance at every double.",
-          instructions: "Throw one dart at every double from D1 to D20, then Bull. Complete three laps and count every successful dart.",
+          description: "Give every double one match-like dart, then repeat for three circuits.",
+          format: "63 darts",
+          setup: "Play three circuits. In each circuit throw exactly one dart at D1, D2 and so on through D20, followed by one dart at inner Bull.",
+          rules: "A hit on the nominated double scores 1 point. Singles, trebles and other doubles score zero. Move to the next target after every dart whether you hit or miss.",
+          finish: "The routine ends after three circuits: 21 targets per circuit and 63 darts in total.",
+          outcome: "Record successful doubles out of 63. Higher is better.",
           resultLabel: "Hits out of 63",
-          resultHint: "Enter the number of doubles hit",
-          timer: false
+          resultHint: "Enter the number of successful darts",
+          timerMode: false
         },
         {
           id: "bobs-27",
           category: "Doubles",
           title: "Bob's 27",
-          description: "The classic doubles benchmark.",
-          instructions: "Start on 27 points. Throw three darts at each double from D1 to D20, then Bull. Add the double value for every hit. If all three darts miss, subtract that double's value. Stop if the score falls below zero.",
+          description: "The classic survival test covering every double on the board.",
+          format: "Up to 63 darts",
+          setup: "Begin with 27 points. Throw one visit at D1, then D2 and continue through D20 before finishing with inner Bull.",
+          rules: "For every hit, add that double's value: one D8 adds 16, two D8s add 32, and inner Bull adds 50 per hit. If all three darts miss the target, subtract the target's value once. Then move to the next double.",
+          finish: "Lose immediately if the running score falls below zero. Win by completing the Bull visit with a score of zero or more.",
+          outcome: "Record the score at the moment you lose, including a negative score, or your final score after Bull if you complete the board.",
           resultLabel: "Final score",
-          resultHint: "Enter your finishing score",
-          timer: false
+          resultHint: "Enter your finishing score, including minus if needed",
+          timerMode: false
         },
         {
           id: "favourite-doubles",
           category: "Doubles",
           title: "Favourite Doubles",
-          description: "Build confidence on four common match doubles.",
-          instructions: "Throw 12 darts at each of D20, D16, D10 and D8. Count every hit and add the four blocks together.",
+          description: "A fixed-dart accuracy test on four common match doubles.",
+          format: "48 darts",
+          setup: "Play four blocks in this order: D20, D16, D10 and D8. Each block is 12 darts (four visits).",
+          rules: "Only the nominated double scores. Every successful dart counts as 1 hit; singles, trebles and neighbouring doubles score zero. Keep one hit count for each block.",
+          finish: "The routine ends after 12 darts at each of the four doubles: 48 darts total.",
+          outcome: "Add the four blocks and record successful doubles out of 48. Higher is better.",
           resultLabel: "Hits out of 48",
-          resultHint: "Enter your total doubles hit",
-          timer: false
+          resultHint: "Enter your total successful doubles",
+          timerMode: false
+        },
+        {
+          id: "eight-of-32-40",
+          category: "Doubles",
+          title: "8 of 32 & 40",
+          description: "Practise two common finishes and the recovery doubles they create.",
+          format: "16 attempts",
+          setup: "Make eight checkout attempts from 32, followed by eight checkout attempts from 40. Each attempt allows a maximum of three darts.",
+          rules: "Use normal double-out rules. If the checkout is completed, score its full starting value: 32 points or 40 points. If you fail or bust, score zero for that attempt. Begin every new attempt from the original number.",
+          finish: "The routine ends after all 16 attempts: 48 darts maximum.",
+          outcome: "Add the successful checkout values. The maximum is 576 points (8 × 32 plus 8 × 40). Higher is better.",
+          resultLabel: "Points out of 576",
+          resultHint: "Enter your total points",
+          timerMode: false
         },
         {
           id: "41-and-up",
           category: "Checkouts",
           title: "41 and Up",
-          description: "Climb through the short checkouts with five attempts each.",
-          instructions: "Start at 41. You have five three-dart attempts to complete it. A checkout moves you up one. Stop when all five attempts at one number are missed.",
+          description: "Climb the short checkouts, with five chances to unlock each number.",
+          format: "41–60 ladder",
+          setup: "Begin on checkout 41. Your target is to progress one number at a time until you complete 60.",
+          rules: "You have five separate three-dart attempts at the current checkout. Complete it within one attempt to move up one. A bust fails that attempt and the score resets to the original checkout for the next attempt.",
+          finish: "Win by completing checkout 60. Lose when all five attempts at one checkout are missed.",
+          outcome: "Record the highest checkout completed. If you win, record 60 complete.",
           resultLabel: "Highest checkout completed",
-          resultHint: "Enter the highest number completed",
-          timer: false
+          resultHint: "For example 53 or 60 complete",
+          timerMode: false
         },
         {
           id: "checkout-bounce",
           category: "Checkouts",
           title: "Checkout Bounce",
-          description: "Work changing routes between 80 and 120.",
-          instructions: "Start on 100 and allow six darts for each checkout. A finish moves you up 2; a miss moves you down 3. Win at 120 and lose at 80.",
-          resultLabel: "Final checkout number",
-          resultHint: "Enter the number where the routine ended",
-          timer: false
+          description: "Move between 80 and 120 according to each six-dart result.",
+          format: "20-minute limit",
+          setup: "Start on checkout 100 with a 20-minute countdown. Each round gives you up to six darts to complete the current checkout.",
+          rules: "Complete the checkout within six darts and the next target increases by 2. Fail or bust without recovering inside six darts and the next target decreases by 3. Always begin the next round from the new full checkout number.",
+          finish: "Win by reaching and completing 120. Lose by falling to 80. If neither happens, stop when the countdown reaches 00:00.",
+          outcome: "Record WIN 120, LOSS 80, or the checkout number showing when time expired.",
+          resultLabel: "Outcome or final checkout",
+          resultHint: "For example WIN 120, LOSS 80 or 107",
+          timerMode: "countdown",
+          limitSeconds: 1200,
+          timeoutMessage: "Time is up. Enter the checkout number you had reached."
         },
         {
           id: "checkout-golf",
           category: "Checkouts",
           title: "Checkout Golf",
-          description: "Eighteen varied finishes, scored by darts used.",
-          instructions: "Play these checkouts as 18 holes: 41, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 110 and 120. Use up to six darts per hole. Count every dart used; a failed hole scores 7.",
+          description: "Play 18 fixed checkout holes and try to beat the course par of 73.",
+          format: "18 holes · Par 73",
+          setup: "Front 9: 40 (par 3), 120 (5), 10 (3), 80 (4), 95 (4), 36 (3), 125 (5), 87 (4), 20 (3). Back 9: 65 (4), 120 (4), 101 (4), 170 (6), 130 (5), 19 (3), 72 (4), 88 (4), 76 (4).",
+          rules: "Allow up to six darts per hole. A successful hole scores the number of darts used. A bust ends that three-dart visit, but you may use the second visit if available. If the checkout is not completed within six darts, score 7 for the hole.",
+          finish: "The routine ends after all 18 holes. Add the front-nine and back-nine dart totals.",
+          outcome: "Under 73 beats the course, exactly 73 is par, and over 73 loses to the course. Record the total darts.",
           resultLabel: "Total darts",
-          resultHint: "Enter your score for all 18 holes",
-          timer: false
+          resultHint: "Enter your 18-hole total",
+          timerMode: false
         },
         {
           id: "club-checkouts",
           category: "Checkouts",
           title: "Club Checkouts 18–30",
-          description: "Build confidence on small finishes and split shots.",
-          instructions: "Work through every checkout from 18 to 30 with up to six darts each. Score 3 points for finishing in 1–2 darts, 2 points in 3–4 darts and 1 point in 5–6 darts.",
+          description: "Thirteen small checkouts scored by how quickly they are completed.",
+          format: "13 checkouts",
+          setup: "Play each checkout from 18 through 30 once, in numerical order. Allow a maximum of six darts for each number.",
+          rules: "Score 3 points for finishing in 1–2 darts, 2 points in 3–4 darts, 1 point in 5–6 darts and zero for a failed checkout. A bust ends that visit; reset to the original number if a second visit remains.",
+          finish: "The routine ends after the attempt at 30. There are 13 checkouts and the maximum score is 39 points.",
+          outcome: "Record total points out of 39. This is a fixed score challenge rather than a win-or-lose game; higher is better.",
           resultLabel: "Points out of 39",
           resultHint: "Enter your final points",
-          timer: false
+          timerMode: false
         },
         {
           id: "killer-checkouts",
           category: "Checkouts",
           title: "Killer Checkouts",
-          description: "A simple lives game for checkout pressure.",
-          instructions: "Start on checkout 60 with five lives. Allow six darts per attempt. A finish gains one life and a miss loses one. Win at 12 lives; lose at zero.",
-          resultLabel: "Final lives",
-          resultHint: "Enter 0–12",
-          timer: false
+          description: "Defend your lives by repeatedly completing checkout 60.",
+          format: "5–12 lives",
+          setup: "Use checkout 60 for every round and begin with five lives. Each round allows a maximum of six darts.",
+          rules: "Complete 60 within six darts to gain one life. Fail to complete it, or use all six darts after a bust, and lose one life. Reset to 60 at the start of every round.",
+          finish: "Win when you reach 12 lives. Lose when your lives reach zero.",
+          outcome: "Record WIN 12 or LOSS 0. If you stop early, record the number of lives remaining.",
+          resultLabel: "Final lives or outcome",
+          resultHint: "For example WIN 12, LOSS 0 or 7 lives",
+          timerMode: false
         }
       ];
 
@@ -398,6 +479,7 @@
       var timerId = null;
       var timerStartedAt = 0;
       var elapsedBeforeStart = 0;
+      var timerExpired = false;
 
       var library = document.getElementById("library");
       var scheduleList = document.getElementById("scheduleList");
@@ -440,9 +522,10 @@
             routine = routines[i];
             if (routine.category === categories[c]) {
               html += '<div class="card-wrap"><article class="card' + (isSelected(routine.id) ? ' selected' : '') + '">';
-              html += '<div class="card-top"><span class="result-tag">' + (routine.timer ? 'Time result' : 'Score result') + '</span></div>';
+              html += '<div class="card-top"><span class="result-tag">' + (routine.timerMode ? 'Timer + result' : 'Score result') + '</span><span class="format-tag">' + routine.format + '</span></div>';
               html += '<h3>' + routine.title + '</h3>';
               html += '<p>' + routine.description + '</p>';
+              html += '<p class="card-outcome"><strong>Record:</strong> ' + routine.resultLabel + '</p>';
               html += '<button class="add-button" type="button" data-routine="' + routine.id + '">' + (isSelected(routine.id) ? 'Remove from schedule' : 'Add to schedule') + '</button>';
               html += '</article></div>';
             }
@@ -516,18 +599,23 @@
         var routine = findRoutine(selected[currentIndex]);
         stopTimer();
         elapsedBeforeStart = 0;
-        timerDisplay.innerHTML = "00:00";
+        timerExpired = false;
+        timerDisplay.innerHTML = routine.timerMode === "countdown" ? formattedTime(routine.limitSeconds * 1000) : "00:00";
 
         document.getElementById("progress").innerHTML = "Routine " + (currentIndex + 1) + " of " + selected.length;
         document.getElementById("playCategory").innerHTML = routine.category;
         document.getElementById("playTitle").innerHTML = routine.title;
         document.getElementById("playDescription").innerHTML = routine.description;
-        document.getElementById("playInstructions").innerHTML = routine.instructions;
+        document.getElementById("playSetup").innerHTML = routine.setup;
+        document.getElementById("playRules").innerHTML = routine.rules;
+        document.getElementById("playFinish").innerHTML = routine.finish;
+        document.getElementById("playOutcome").innerHTML = routine.outcome;
         document.getElementById("resultLabel").innerHTML = routine.resultLabel;
         resultInput.value = "";
         resultInput.setAttribute("placeholder", routine.resultHint);
         resultError.innerHTML = "";
-        timerBox.className = routine.timer ? "timer-box" : "timer-box hidden";
+        timerBox.className = routine.timerMode ? "timer-box" : "timer-box hidden";
+        document.getElementById("timerStart").innerHTML = routine.timerMode === "countdown" ? "Start countdown" : "Start stopwatch";
         nextButton.innerHTML = currentIndex === selected.length - 1 ? "Save result & finish" : "Save result & continue";
       }
 
@@ -550,11 +638,31 @@
       }
 
       function updateTimer() {
-        timerDisplay.innerHTML = formattedTime(currentElapsed());
+        var routine = findRoutine(selected[currentIndex]);
+        var elapsed = currentElapsed();
+        var remaining;
+
+        if (routine && routine.timerMode === "countdown") {
+          remaining = (routine.limitSeconds * 1000) - elapsed;
+          if (remaining <= 0) {
+            elapsedBeforeStart = routine.limitSeconds * 1000;
+            timerStartedAt = 0;
+            if (timerId) { window.clearInterval(timerId); }
+            timerId = null;
+            timerExpired = true;
+            timerDisplay.innerHTML = "00:00";
+            resultError.innerHTML = routine.timeoutMessage;
+            return;
+          }
+          timerDisplay.innerHTML = formattedTime(remaining + 999);
+        } else {
+          timerDisplay.innerHTML = formattedTime(elapsed);
+        }
       }
 
       function startTimer() {
-        if (timerStartedAt) { return; }
+        var routine = findRoutine(selected[currentIndex]);
+        if (!routine || !routine.timerMode || timerStartedAt || timerExpired) { return; }
         timerStartedAt = new Date().getTime();
         timerId = window.setInterval(updateTimer, 250);
       }
@@ -575,16 +683,19 @@
       }
 
       function resetTimer() {
+        var routine = findRoutine(selected[currentIndex]);
         stopTimer();
         elapsedBeforeStart = 0;
-        timerDisplay.innerHTML = "00:00";
+        timerExpired = false;
+        resultError.innerHTML = "";
+        timerDisplay.innerHTML = routine && routine.timerMode === "countdown" ? formattedTime(routine.limitSeconds * 1000) : "00:00";
       }
 
       function saveAndContinue() {
         var value = resultInput.value.replace(/^\s+|\s+$/g, "");
         var routine = findRoutine(selected[currentIndex]);
 
-        if (!value && routine.timer && currentElapsed() > 0) {
+        if (!value && routine.timerMode && routine.autoTimeResult && currentElapsed() > 0 && !timerExpired) {
           pauseTimer();
           value = formattedTime(elapsedBeforeStart);
           resultInput.value = value;
