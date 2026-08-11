@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#17352d">
+  <title>Oche — Darts Training</title>
+  <style>
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: #f3efe6;
+      color: #17231f;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      font-size: 17px;
+      line-height: 1.45;
+    }
+    button, input { font: inherit; }
+    button { -webkit-appearance: none; appearance: none; cursor: pointer; }
+    button:disabled { cursor: default; opacity: .45; }
+    .wrap { width: 92%; max-width: 1020px; margin: 0 auto; }
+    .topbar {
+      background: #17352d;
+      color: #fffdf7;
+      padding: 20px 0;
+      border-bottom: 5px solid #d39c49;
+    }
+    .brand { margin: 0; font-size: 28px; letter-spacing: .06em; }
+    .tagline { margin: 4px 0 0; color: #dbe5df; font-size: 15px; }
+    .intro { padding: 34px 0 20px; }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #9a5a2c;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; font-size: 36px; line-height: 1.08; }
+    .intro-copy { max-width: 650px; margin: 12px 0 0; color: #4f5c57; }
+    .category-nav { margin: 22px 0 4px; }
+    .category-nav a {
+      display: inline-block;
+      margin: 0 8px 8px 0;
+      padding: 10px 15px;
+      border: 1px solid #b9b2a5;
+      border-radius: 999px;
+      color: #17352d;
+      font-weight: bold;
+      text-decoration: none;
+      background: #fffdf8;
+    }
+    .library { padding-bottom: 30px; }
+    .category { padding-top: 28px; }
+    .category-head { border-bottom: 2px solid #cfc7b8; margin-bottom: 16px; }
+    .category-head h2 { display: inline-block; margin: 0 0 -2px; padding-bottom: 9px; border-bottom: 2px solid #17352d; font-size: 26px; }
+    .cards { margin-left: -12px; overflow: hidden; }
+    .card-wrap { float: left; width: 50%; padding: 0 0 12px 12px; }
+    .card {
+      min-height: 225px;
+      padding: 20px;
+      background: #fffdf8;
+      border: 1px solid #d6cfc2;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(35, 38, 31, .05);
+    }
+    .card.selected { border-color: #17352d; box-shadow: inset 0 0 0 2px #17352d; }
+    .card-top { min-height: 36px; }
+    .result-tag {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #e8e1d5;
+      color: #5c4935;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .card h3 { margin: 10px 0 7px; font-size: 21px; }
+    .card p { margin: 0; color: #59635f; font-size: 15px; }
+    .add-button {
+      width: 100%;
+      margin-top: 17px;
+      padding: 11px 12px;
+      border: 0;
+      border-radius: 7px;
+      background: #17352d;
+      color: #fff;
+      font-weight: bold;
+    }
+    .card.selected .add-button { background: #d9e5df; color: #17352d; }
+    .schedule-shell {
+      margin: 20px auto 42px;
+      padding: 22px;
+      background: #17352d;
+      color: #fff;
+      border-radius: 13px;
+    }
+    .schedule-shell h2 { margin: 0; font-size: 25px; }
+    .schedule-help { margin: 4px 0 15px; color: #cbdad3; font-size: 15px; }
+    .empty { margin: 0; padding: 15px; border: 1px dashed #769187; border-radius: 8px; color: #d6e2dd; }
+    .schedule-list { margin: 0 0 16px; padding: 0; list-style: none; }
+    .schedule-item {
+      overflow: hidden;
+      margin-bottom: 7px;
+      padding: 11px 12px;
+      background: #25483e;
+      border-radius: 7px;
+    }
+    .schedule-name { float: left; width: 75%; padding-top: 4px; font-weight: bold; }
+    .remove-button { float: right; padding: 5px 9px; border: 0; border-radius: 5px; background: #f1e8da; color: #573b2b; }
+    .play-button {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #d39c49;
+      color: #17231f;
+      font-size: 19px;
+      font-weight: bold;
+    }
+    .hidden { display: none !important; }
+    .play-screen { min-height: 100vh; background: #f3efe6; padding: 24px 0 44px; }
+    .play-head { overflow: hidden; margin-bottom: 32px; }
+    .back-button { float: left; padding: 9px 12px; border: 1px solid #a9a194; border-radius: 7px; background: #fffdf8; color: #17352d; }
+    .progress { float: right; padding-top: 9px; color: #56635e; font-weight: bold; }
+    .routine-panel { max-width: 720px; margin: 0 auto; padding: 30px; background: #fffdf8; border: 1px solid #d4ccbe; border-radius: 14px; }
+    .routine-panel h1 { margin-bottom: 10px; }
+    .instructions { margin: 20px 0; padding: 18px; background: #eee8dd; border-left: 5px solid #d39c49; white-space: pre-line; }
+    .timer-box { margin: 22px 0; padding: 20px; text-align: center; background: #17352d; color: #fff; border-radius: 10px; }
+    .timer { font-family: "Courier New", monospace; font-size: 52px; line-height: 1; letter-spacing: .03em; }
+    .timer-controls { margin-top: 17px; }
+    .timer-controls button { margin: 0 4px 7px; padding: 9px 16px; border: 0; border-radius: 6px; background: #fff; color: #17352d; font-weight: bold; }
+    .result-field { margin-top: 22px; }
+    .result-field label { display: block; margin-bottom: 7px; font-weight: bold; }
+    .result-field input { width: 100%; padding: 13px; border: 1px solid #9f988c; border-radius: 7px; background: #fff; font-size: 20px; }
+    .next-button { width: 100%; margin-top: 18px; padding: 14px; border: 0; border-radius: 8px; background: #17352d; color: #fff; font-weight: bold; }
+    .error { min-height: 24px; margin: 8px 0 0; color: #a43c27; font-weight: bold; }
+    .summary-list { margin: 22px 0; padding: 0; list-style: none; }
+    .summary-list li { padding: 13px 0; border-bottom: 1px solid #d8d1c5; }
+    .summary-result { float: right; font-weight: bold; }
+    .clear { clear: both; }
+    @media (max-width: 700px) {
+      h1 { font-size: 31px; }
+      .card-wrap { float: none; width: 100%; }
+      .card { min-height: 0; }
+      .routine-panel { padding: 22px; }
+      .timer { font-size: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="builderView">
+    <header class="topbar">
+      <div class="wrap">
+        <h2 class="brand">OCHE</h2>
+        <p class="tagline">Simple, focused darts training.</p>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="intro">
+        <p class="eyebrow">Build a session</p>
+        <h1>What do you want to practise?</h1>
+        <p class="intro-copy">Choose any routines, add them to your schedule, then press play. Each routine records one useful result.</p>
+        <nav class="category-nav" aria-label="Routine categories">
+          <a href="#scoring">Scoring</a>
+          <a href="#doubles">Doubles</a>
+          <a href="#checkouts">Checkouts</a>
+        </nav>
+      </section>
+
+      <div id="library" class="library" aria-live="polite"></div>
+
+      <section class="schedule-shell" aria-labelledby="scheduleTitle">
+        <h2 id="scheduleTitle">Your schedule</h2>
+        <p class="schedule-help">Routines will play in the order you add them.</p>
+        <p id="emptySchedule" class="empty">No routines selected yet.</p>
+        <ol id="scheduleList" class="schedule-list"></ol>
+        <button id="playButton" class="play-button" type="button" disabled>Play schedule</button>
+      </section>
+    </main>
+  </div>
+
+  <div id="playView" class="play-screen hidden">
+    <div class="wrap">
+      <div class="play-head">
+        <button id="backButton" class="back-button" type="button">← Back to routines</button>
+        <div id="progress" class="progress"></div>
+      </div>
+
+      <section id="routinePanel" class="routine-panel">
+        <p id="playCategory" class="eyebrow"></p>
+        <h1 id="playTitle"></h1>
+        <p id="playDescription"></p>
+        <div id="playInstructions" class="instructions"></div>
+
+        <div id="timerBox" class="timer-box hidden">
+          <div id="timerDisplay" class="timer">00:00</div>
+          <div class="timer-controls">
+            <button id="timerStart" type="button">Start</button>
+            <button id="timerPause" type="button">Pause</button>
+            <button id="timerReset" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div class="result-field">
+          <label id="resultLabel" for="resultInput">Result</label>
+          <input id="resultInput" type="text" inputmode="decimal" autocomplete="off">
+        </div>
+        <p id="resultError" class="error" role="alert"></p>
+        <button id="nextButton" class="next-button" type="button">Save result &amp; continue</button>
+      </section>
+
+      <section id="summaryPanel" class="routine-panel hidden">
+        <p class="eyebrow">Session complete</p>
+        <h1>Training recorded.</h1>
+        <p>These results can be sent to Google Sheets when the save connection is added later.</p>
+        <ul id="summaryList" class="summary-list"></ul>
+        <button id="finishButton" class="next-button" type="button">Back to routines</button>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var routines = [
+        {
+          id: "twelve-dart-targets",
+          category: "Scoring",
+          title: "12-Dart Targets",
+          description: "A clear scoring benchmark across the main scoring targets.",
+          instructions: "Throw 12 darts at 20, then 12 at 19, 12 at 18 and 12 at Bull. Only darts in the nominated segment score. Add the four block scores together.",
+          resultLabel: "Combined score",
+          resultHint: "Enter the total from all four targets",
+          timer: false
+        },
+        {
+          id: "around-clock-singles",
+          category: "Scoring",
+          title: "Around the Clock Singles",
+          description: "Move around the whole board and record your finishing time.",
+          instructions: "Start at 1 and hit each number in order through 20, then finish on Bull. Singles, doubles and trebles all count. Stop the timer when Bull is hit.",
+          resultLabel: "Completion time",
+          resultHint: "Use the timer or enter a time, for example 08:42",
+          timer: true
+        },
+        {
+          id: "straight-20-19",
+          category: "Scoring",
+          title: "Straight 20s & 19s",
+          description: "Test how long your darts stay in the intended segment.",
+          instructions: "On 20: single scores 1 and treble scores 3. A dart outside the 20 segment ends the run. Play five runs, then repeat on 19. Record the best streak from either target.",
+          resultLabel: "Best streak",
+          resultHint: "Enter your best run score",
+          timer: false
+        },
+        {
+          id: "24-dart-high-score",
+          category: "Scoring",
+          title: "24-Dart High Score",
+          description: "Measure sustained scoring rather than one lucky visit.",
+          instructions: "Score normally with 24 darts (8 visits). Complete three rounds. Put the three scores in order and record the middle score.",
+          resultLabel: "Median score",
+          resultHint: "Enter the middle of your three scores",
+          timer: false
+        },
+        {
+          id: "cricket-scoring",
+          category: "Scoring",
+          title: "Cricket Scoring",
+          description: "Switch between useful targets and count accurate darts.",
+          instructions: "Throw three darts at each of 15, 16, 17, 18, 19, 20 and Bull. Singles score 1, doubles 2 and trebles 3. Outer Bull scores 1 and inner Bull scores 2.",
+          resultLabel: "Total marks out of 63",
+          resultHint: "Enter your total marks",
+          timer: false
+        },
+        {
+          id: "round-board-hits",
+          category: "Scoring",
+          title: "Round the Board Hits",
+          description: "A low-pressure accuracy score across every segment.",
+          instructions: "Throw one visit at each number from 1 to 20, then Bull. Singles score 1, doubles 2 and trebles 3. Outer Bull scores 1 and inner Bull scores 2.",
+          resultLabel: "Total marks",
+          resultHint: "Enter your final total",
+          timer: false
+        },
+        {
+          id: "around-clock-doubles",
+          category: "Doubles",
+          title: "Around the Clock Doubles",
+          description: "Cover every double against a 20-minute clock.",
+          instructions: "Start at D1 and move through D20, then Bull. Hit the current double to advance. Finish early and record the time; if 20 minutes expires, record the last double completed.",
+          resultLabel: "Time or last double completed",
+          resultHint: "For example 16:24 or D14",
+          timer: true
+        },
+        {
+          id: "double-tap",
+          category: "Doubles",
+          title: "Double Tap",
+          description: "Two visits at each double, working down the board.",
+          instructions: "Start on D20 and work down to D1. Take two visits (six darts) at each double. A hit moves you to the next double; if both visits miss, stay on the same double. Record the last double completed.",
+          resultLabel: "Last double completed",
+          resultHint: "For example D12",
+          timer: false
+        },
+        {
+          id: "one-at-double",
+          category: "Doubles",
+          title: "One at the Double",
+          description: "One match-like chance at every double.",
+          instructions: "Throw one dart at every double from D1 to D20, then Bull. Complete three laps and count every successful dart.",
+          resultLabel: "Hits out of 63",
+          resultHint: "Enter the number of doubles hit",
+          timer: false
+        },
+        {
+          id: "bobs-27",
+          category: "Doubles",
+          title: "Bob's 27",
+          description: "The classic doubles benchmark.",
+          instructions: "Start on 27 points. Throw three darts at each double from D1 to D20, then Bull. Add the double value for every hit. If all three darts miss, subtract that double's value. Stop if the score falls below zero.",
+          resultLabel: "Final score",
+          resultHint: "Enter your finishing score",
+          timer: false
+        },
+        {
+          id: "favourite-doubles",
+          category: "Doubles",
+          title: "Favourite Doubles",
+          description: "Build confidence on four common match doubles.",
+          instructions: "Throw 12 darts at each of D20, D16, D10 and D8. Count every hit and add the four blocks together.",
+          resultLabel: "Hits out of 48",
+          resultHint: "Enter your total doubles hit",
+          timer: false
+        },
+        {
+          id: "41-and-up",
+          category: "Checkouts",
+          title: "41 and Up",
+          description: "Climb through the short checkouts with five attempts each.",
+          instructions: "Start at 41. You have five three-dart attempts to complete it. A checkout moves you up one. Stop when all five attempts at one number are missed.",
+          resultLabel: "Highest checkout completed",
+          resultHint: "Enter the highest number completed",
+          timer: false
+        },
+        {
+          id: "checkout-bounce",
+          category: "Checkouts",
+          title: "Checkout Bounce",
+          description: "Work changing routes between 80 and 120.",
+          instructions: "Start on 100 and allow six darts for each checkout. A finish moves you up 2; a miss moves you down 3. Win at 120 and lose at 80.",
+          resultLabel: "Final checkout number",
+          resultHint: "Enter the number where the routine ended",
+          timer: false
+        },
+        {
+          id: "checkout-golf",
+          category: "Checkouts",
+          title: "Checkout Golf",
+          description: "Eighteen varied finishes, scored by darts used.",
+          instructions: "Play these checkouts as 18 holes: 41, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 110 and 120. Use up to six darts per hole. Count every dart used; a failed hole scores 7.",
+          resultLabel: "Total darts",
+          resultHint: "Enter your score for all 18 holes",
+          timer: false
+        },
+        {
+          id: "club-checkouts",
+          category: "Checkouts",
+          title: "Club Checkouts 18–30",
+          description: "Build confidence on small finishes and split shots.",
+          instructions: "Work through every checkout from 18 to 30 with up to six darts each. Score 3 points for finishing in 1–2 darts, 2 points in 3–4 darts and 1 point in 5–6 darts.",
+          resultLabel: "Points out of 39",
+          resultHint: "Enter your final points",
+          timer: false
+        },
+        {
+          id: "killer-checkouts",
+          category: "Checkouts",
+          title: "Killer Checkouts",
+          description: "A simple lives game for checkout pressure.",
+          instructions: "Start on checkout 60 with five lives. Allow six darts per attempt. A finish gains one life and a miss loses one. Win at 12 lives; lose at zero.",
+          resultLabel: "Final lives",
+          resultHint: "Enter 0–12",
+          timer: false
+        }
+      ];
+
+      var selected = [];
+      var results = [];
+      var currentIndex = 0;
+      var timerId = null;
+      var timerStartedAt = 0;
+      var elapsedBeforeStart = 0;
+
+      var library = document.getElementById("library");
+      var scheduleList = document.getElementById("scheduleList");
+      var emptySchedule = document.getElementById("emptySchedule");
+      var playButton = document.getElementById("playButton");
+      var builderView = document.getElementById("builderView");
+      var playView = document.getElementById("playView");
+      var routinePanel = document.getElementById("routinePanel");
+      var summaryPanel = document.getElementById("summaryPanel");
+      var resultInput = document.getElementById("resultInput");
+      var resultError = document.getElementById("resultError");
+      var nextButton = document.getElementById("nextButton");
+      var timerBox = document.getElementById("timerBox");
+      var timerDisplay = document.getElementById("timerDisplay");
+
+      function findRoutine(id) {
+        var i;
+        for (i = 0; i < routines.length; i += 1) {
+          if (routines[i].id === id) { return routines[i]; }
+        }
+        return null;
+      }
+
+      function isSelected(id) {
+        return selected.indexOf(id) !== -1;
+      }
+
+      function renderLibrary() {
+        var categories = ["Scoring", "Doubles", "Checkouts"];
+        var html = "";
+        var c, i, routine, categoryId;
+
+        for (c = 0; c < categories.length; c += 1) {
+          categoryId = categories[c].toLowerCase();
+          html += '<section id="' + categoryId + '" class="category">';
+          html += '<div class="category-head"><h2>' + categories[c] + '</h2></div>';
+          html += '<div class="cards">';
+
+          for (i = 0; i < routines.length; i += 1) {
+            routine = routines[i];
+            if (routine.category === categories[c]) {
+              html += '<div class="card-wrap"><article class="card' + (isSelected(routine.id) ? ' selected' : '') + '">';
+              html += '<div class="card-top"><span class="result-tag">' + (routine.timer ? 'Time result' : 'Score result') + '</span></div>';
+              html += '<h3>' + routine.title + '</h3>';
+              html += '<p>' + routine.description + '</p>';
+              html += '<button class="add-button" type="button" data-routine="' + routine.id + '">' + (isSelected(routine.id) ? 'Remove from schedule' : 'Add to schedule') + '</button>';
+              html += '</article></div>';
+            }
+          }
+
+          html += '<div class="clear"></div></div></section>';
+        }
+
+        library.innerHTML = html;
+        bindAddButtons();
+      }
+
+      function bindAddButtons() {
+        var buttons = library.getElementsByTagName("button");
+        var i;
+        for (i = 0; i < buttons.length; i += 1) {
+          buttons[i].onclick = function () {
+            toggleRoutine(this.getAttribute("data-routine"));
+          };
+        }
+      }
+
+      function toggleRoutine(id) {
+        var index = selected.indexOf(id);
+        if (index === -1) {
+          selected.push(id);
+        } else {
+          selected.splice(index, 1);
+        }
+        renderLibrary();
+        renderSchedule();
+      }
+
+      function renderSchedule() {
+        var html = "";
+        var i, routine;
+
+        for (i = 0; i < selected.length; i += 1) {
+          routine = findRoutine(selected[i]);
+          html += '<li class="schedule-item">';
+          html += '<span class="schedule-name">' + (i + 1) + '. ' + routine.title + '</span>';
+          html += '<button class="remove-button" type="button" data-remove="' + routine.id + '">Remove</button>';
+          html += '<div class="clear"></div></li>';
+        }
+
+        scheduleList.innerHTML = html;
+        emptySchedule.className = selected.length ? "empty hidden" : "empty";
+        playButton.disabled = selected.length === 0;
+
+        var buttons = scheduleList.getElementsByTagName("button");
+        for (i = 0; i < buttons.length; i += 1) {
+          buttons[i].onclick = function () {
+            toggleRoutine(this.getAttribute("data-remove"));
+          };
+        }
+      }
+
+      function startSchedule() {
+        if (!selected.length) { return; }
+        results = [];
+        currentIndex = 0;
+        builderView.className = "hidden";
+        playView.className = "play-screen";
+        routinePanel.className = "routine-panel";
+        summaryPanel.className = "routine-panel hidden";
+        showRoutine();
+        window.scrollTo(0, 0);
+      }
+
+      function showRoutine() {
+        var routine = findRoutine(selected[currentIndex]);
+        stopTimer();
+        elapsedBeforeStart = 0;
+        timerDisplay.innerHTML = "00:00";
+
+        document.getElementById("progress").innerHTML = "Routine " + (currentIndex + 1) + " of " + selected.length;
+        document.getElementById("playCategory").innerHTML = routine.category;
+        document.getElementById("playTitle").innerHTML = routine.title;
+        document.getElementById("playDescription").innerHTML = routine.description;
+        document.getElementById("playInstructions").innerHTML = routine.instructions;
+        document.getElementById("resultLabel").innerHTML = routine.resultLabel;
+        resultInput.value = "";
+        resultInput.setAttribute("placeholder", routine.resultHint);
+        resultError.innerHTML = "";
+        timerBox.className = routine.timer ? "timer-box" : "timer-box hidden";
+        nextButton.innerHTML = currentIndex === selected.length - 1 ? "Save result & finish" : "Save result & continue";
+      }
+
+      function pad(number) {
+        return number < 10 ? "0" + number : String(number);
+      }
+
+      function formattedTime(milliseconds) {
+        var totalSeconds = Math.floor(milliseconds / 1000);
+        var minutes = Math.floor(totalSeconds / 60);
+        var seconds = totalSeconds % 60;
+        return pad(minutes) + ":" + pad(seconds);
+      }
+
+      function currentElapsed() {
+        if (timerStartedAt) {
+          return elapsedBeforeStart + (new Date().getTime() - timerStartedAt);
+        }
+        return elapsedBeforeStart;
+      }
+
+      function updateTimer() {
+        timerDisplay.innerHTML = formattedTime(currentElapsed());
+      }
+
+      function startTimer() {
+        if (timerStartedAt) { return; }
+        timerStartedAt = new Date().getTime();
+        timerId = window.setInterval(updateTimer, 250);
+      }
+
+      function pauseTimer() {
+        if (!timerStartedAt) { return; }
+        elapsedBeforeStart = currentElapsed();
+        timerStartedAt = 0;
+        if (timerId) { window.clearInterval(timerId); }
+        timerId = null;
+        updateTimer();
+      }
+
+      function stopTimer() {
+        if (timerId) { window.clearInterval(timerId); }
+        timerId = null;
+        timerStartedAt = 0;
+      }
+
+      function resetTimer() {
+        stopTimer();
+        elapsedBeforeStart = 0;
+        timerDisplay.innerHTML = "00:00";
+      }
+
+      function saveAndContinue() {
+        var value = resultInput.value.replace(/^\s+|\s+$/g, "");
+        var routine = findRoutine(selected[currentIndex]);
+
+        if (!value && routine.timer && currentElapsed() > 0) {
+          pauseTimer();
+          value = formattedTime(elapsedBeforeStart);
+          resultInput.value = value;
+        }
+
+        if (!value) {
+          resultError.innerHTML = "Enter a result before continuing.";
+          resultInput.focus();
+          return;
+        }
+
+        pauseTimer();
+        results.push({ title: routine.title, result: value, label: routine.resultLabel });
+        currentIndex += 1;
+
+        if (currentIndex < selected.length) {
+          showRoutine();
+          window.scrollTo(0, 0);
+        } else {
+          showSummary();
+        }
+      }
+
+      function showSummary() {
+        var list = document.getElementById("summaryList");
+        var html = "";
+        var i;
+        stopTimer();
+
+        for (i = 0; i < results.length; i += 1) {
+          html += '<li><span>' + results[i].title + '</span><span class="summary-result">' + results[i].result + '</span><div class="clear"></div></li>';
+        }
+
+        list.innerHTML = html;
+        routinePanel.className = "routine-panel hidden";
+        summaryPanel.className = "routine-panel";
+        document.getElementById("progress").innerHTML = "Complete";
+        window.scrollTo(0, 0);
+      }
+
+      function returnToBuilder() {
+        stopTimer();
+        playView.className = "play-screen hidden";
+        builderView.className = "";
+        window.scrollTo(0, 0);
+      }
+
+      playButton.onclick = startSchedule;
+      document.getElementById("backButton").onclick = returnToBuilder;
+      document.getElementById("finishButton").onclick = returnToBuilder;
+      document.getElementById("timerStart").onclick = startTimer;
+      document.getElementById("timerPause").onclick = pauseTimer;
+      document.getElementById("timerReset").onclick = resetTimer;
+      nextButton.onclick = saveAndContinue;
+      resultInput.onkeydown = function (event) {
+        event = event || window.event;
+        if (event.keyCode === 13) { saveAndContinue(); }
+      };
+
+      renderLibrary();
+      renderSchedule();
+    }());
+  </script>
+</body>
+</html>
