@@ -355,7 +355,8 @@
 
       var API_URL = "https://script.google.com/macros/s/AKfycbz5nJ3_BP8kQt4Cjhwjn3FzGtonRsTsYLz_xjLbUG6UbG2p3lxMat4MDujeTypk0C6KHw/exec";
       var RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Zi0OHmTvxZOpkgBy7TcrKQW8lu7QQjtIOhxV65Icl2g/gviz/tq?tqx=out:csv&gid=990006";
-      var CLIENT_VERSION = "1.2.1";
+      var RESULTS_ONLY_PLAYER_ID = "646";
+      var CLIENT_VERSION = "1.2.2";
 
       var routines = [
         {
@@ -766,7 +767,8 @@
 
       function loadPlayers() {
         requestJson("GET", API_URL + "?action=players", null, function (error, data) {
-          var html = '<option value="">Choose your name</option>';
+          var trainingHtml = '<option value="">Choose your name</option>';
+          var resultsHtml = '<option value="">Choose your name</option>';
           var saved = "";
           var i;
           if (error) {
@@ -778,10 +780,13 @@
           }
           players = data.players || [];
           for (i = 0; i < players.length; i += 1) {
-            html += '<option value="' + escapeHtml(players[i].playerId) + '">' + escapeHtml(players[i].displayName) + '</option>';
+            resultsHtml += '<option value="' + escapeHtml(players[i].playerId) + '">' + escapeHtml(players[i].displayName) + '</option>';
+            if (String(players[i].playerId) !== RESULTS_ONLY_PLAYER_ID) {
+              trainingHtml += '<option value="' + escapeHtml(players[i].playerId) + '">' + escapeHtml(players[i].displayName) + '</option>';
+            }
           }
-          playerSelect.innerHTML = html;
-          resultsPlayerSelect.innerHTML = html;
+          playerSelect.innerHTML = trainingHtml;
+          resultsPlayerSelect.innerHTML = resultsHtml;
           playerSelect.disabled = false;
           resultsPlayerSelect.disabled = false;
           playerMessage.innerHTML = "Choose the player whose results will be saved.";
@@ -790,7 +795,7 @@
           if (saved) {
             playerSelect.value = saved;
             resultsPlayerSelect.value = saved;
-            selectPlayer();
+            if (playerSelect.value) { selectPlayer(); }
           }
         });
       }
@@ -812,11 +817,24 @@
       }
 
       function selectResultsPlayer() {
-        playerSelect.value = resultsPlayerSelect.value;
-        selectPlayer();
-        if (selectedPlayer) {
-          loadResults(selectedPlayer.playerId);
+        var i;
+        var resultsPlayer = null;
+        for (i = 0; i < players.length; i += 1) {
+          if (String(players[i].playerId) === String(resultsPlayerSelect.value)) { resultsPlayer = players[i]; break; }
+        }
+        if (resultsPlayer) {
+          selectedPlayer = resultsPlayer;
+          if (String(resultsPlayer.playerId) !== RESULTS_ONLY_PLAYER_ID) {
+            playerSelect.value = resultsPlayer.playerId;
+            playerMessage.innerHTML = "Training will be saved for " + escapeHtml(resultsPlayer.displayName) + ".";
+          } else {
+            playerSelect.value = "";
+            playerMessage.innerHTML = "Choose the player whose results will be saved.";
+          }
+          try { window.localStorage.setItem("ocheTrainingPlayerId", resultsPlayer.playerId); } catch (ignore) {}
+          loadResults(resultsPlayer.playerId);
         } else {
+          selectedPlayer = null;
           resultsLoadToken += 1;
           resultsMessage.innerHTML = "Choose a player to see their training history.";
           renderResults([]);
@@ -1011,7 +1029,9 @@
         builderView.className = "hidden";
         playView.className = "play-screen hidden";
         resultsView.className = "";
-        if (selectedPlayer) {
+        if (resultsPlayerSelect.value) {
+          selectResultsPlayer();
+        } else if (selectedPlayer) {
           resultsPlayerSelect.value = selectedPlayer.playerId;
           loadResults(selectedPlayer.playerId);
         } else {
@@ -1024,6 +1044,7 @@
         resultsView.className = "hidden";
         playView.className = "play-screen hidden";
         builderView.className = "";
+        selectPlayer();
         window.scrollTo(0, 0);
       }
 
