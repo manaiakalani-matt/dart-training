@@ -29,6 +29,17 @@
     }
     .brand { margin: 0; font-size: 28px; letter-spacing: .06em; }
     .tagline { margin: 4px 0 0; color: #dbe5df; font-size: 15px; }
+    .view-tabs { margin-top: 14px; }
+    .view-tab {
+      margin: 0 7px 0 0;
+      padding: 9px 15px;
+      border: 1px solid #769187;
+      border-radius: 999px;
+      background: transparent;
+      color: #fffdf7;
+      font-weight: bold;
+    }
+    .view-tab.active { background: #d39c49; border-color: #d39c49; color: #17231f; }
     .intro { padding: 34px 0 20px; }
     .eyebrow {
       margin: 0 0 8px;
@@ -173,6 +184,39 @@
     .save-message { min-height: 24px; margin: 12px 0 0; font-weight: bold; }
     .save-message.good { color: #25633f; }
     .save-message.bad { color: #a43c27; }
+    .results-main { padding: 34px 0 48px; }
+    .results-intro { margin-bottom: 24px; }
+    .results-intro .player-box { margin-bottom: 18px; }
+    .results-list { margin-top: 28px; }
+    .results-category { margin: 30px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #cfc7b8; }
+    .result-card {
+      width: 100%;
+      margin-bottom: 14px;
+      padding: 20px;
+      background: #fffdf8;
+      border: 1px solid #d6cfc2;
+      border-radius: 12px;
+    }
+    .result-card-head { overflow: hidden; margin-bottom: 14px; }
+    .result-card h3 { float: left; margin: 0; font-size: 21px; }
+    .trend-badge { float: right; padding: 4px 9px; border-radius: 999px; background: #e8e1d5; color: #5c4935; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+    .trend-badge.up { background: #dce9e3; color: #245443; }
+    .trend-badge.down { background: #f2ded8; color: #8b3c2c; }
+    .result-stats { margin: 0 -5px 14px; overflow: hidden; }
+    .result-stat { float: left; width: 33.333%; padding: 0 5px; }
+    .result-stat-inner { min-height: 70px; padding: 10px; background: #eee8dd; border-radius: 7px; }
+    .result-stat-label { display: block; color: #6b736f; font-size: 12px; font-weight: bold; letter-spacing: .06em; text-transform: uppercase; }
+    .result-stat-value { display: block; margin-top: 4px; color: #17352d; font-weight: bold; }
+    .spark-wrap { width: 100%; }
+    .spark-wrap svg { display: block; width: 100%; height: 105px; }
+    .spark-axis { stroke: #ddd5c8; stroke-width: 1; }
+    .spark-line { fill: none; stroke: #2c6654; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .spark-line.down { stroke: #a6533e; }
+    .spark-point { fill: #d39c49; stroke: #fffdf8; stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .spark-dates { overflow: hidden; margin-top: 3px; color: #747d78; font-size: 12px; }
+    .spark-date-first { float: left; }
+    .spark-date-last { float: right; }
+    .empty-spark { height: 105px; padding-top: 42px; border-top: 1px dashed #c9c1b4; border-bottom: 1px dashed #c9c1b4; color: #7b837f; text-align: center; }
     .clear { clear: both; }
     @media (max-width: 700px) {
       h1 { font-size: 31px; }
@@ -181,6 +225,10 @@
       .routine-panel { padding: 22px; }
       .timer { font-size: 44px; }
       .result-field { float: none; width: 100%; }
+      .result-stat { float: none; width: 100%; margin-bottom: 6px; }
+      .result-stat-inner { min-height: 0; }
+      .result-card h3, .trend-badge { float: none; }
+      .trend-badge { display: inline-block; margin-top: 8px; }
     }
   </style>
 </head>
@@ -190,6 +238,10 @@
       <div class="wrap">
         <h2 class="brand">OCHE</h2>
         <p class="tagline">Simple, focused darts training.</p>
+        <div class="view-tabs">
+          <button class="view-tab active" type="button">Training</button>
+          <button id="openResultsButton" class="view-tab" type="button">Results</button>
+        </div>
       </div>
     </header>
 
@@ -221,6 +273,34 @@
         <ol id="scheduleList" class="schedule-list"></ol>
         <button id="playButton" class="play-button" type="button" disabled>Play schedule</button>
       </section>
+    </main>
+  </div>
+
+  <div id="resultsView" class="hidden">
+    <header class="topbar">
+      <div class="wrap">
+        <h2 class="brand">OCHE</h2>
+        <p class="tagline">Simple, focused darts training.</p>
+        <div class="view-tabs">
+          <button id="openTrainingButton" class="view-tab" type="button">Training</button>
+          <button class="view-tab active" type="button">Results</button>
+        </div>
+      </div>
+    </header>
+    <main class="wrap results-main">
+      <section class="results-intro">
+        <p class="eyebrow">Player progress</p>
+        <h1>Results</h1>
+        <p class="intro-copy">Every routine is charted separately. A rising line always means improving, including routines where a lower time is better.</p>
+        <div class="player-box">
+          <label for="resultsPlayerSelect">Whose results?</label>
+          <select id="resultsPlayerSelect" disabled>
+            <option value="">Loading players…</option>
+          </select>
+          <p id="resultsMessage" class="player-message">Connecting to the training log…</p>
+        </div>
+      </section>
+      <div id="resultsList" class="results-list"></div>
     </main>
   </div>
 
@@ -274,7 +354,8 @@
       "use strict";
 
       var API_URL = "https://script.google.com/macros/s/AKfycbz5nJ3_BP8kQt4Cjhwjn3FzGtonRsTsYLz_xjLbUG6UbG2p3lxMat4MDujeTypk0C6KHw/exec";
-      var CLIENT_VERSION = "1.1.0";
+      var RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Zi0OHmTvxZOpkgBy7TcrKQW8lu7QQjtIOhxV65Icl2g/gviz/tq?tqx=out:csv&gid=990006";
+      var CLIENT_VERSION = "1.2.0";
 
       var routines = [
         {
@@ -572,6 +653,7 @@
       var timerStartedAt = 0;
       var elapsedBeforeStart = 0;
       var timerExpired = false;
+      var resultsLoadToken = 0;
 
       var library = document.getElementById("library");
       var scheduleList = document.getElementById("scheduleList");
@@ -588,6 +670,10 @@
       var timerDisplay = document.getElementById("timerDisplay");
       var playerSelect = document.getElementById("playerSelect");
       var playerMessage = document.getElementById("playerMessage");
+      var resultsView = document.getElementById("resultsView");
+      var resultsPlayerSelect = document.getElementById("resultsPlayerSelect");
+      var resultsMessage = document.getElementById("resultsMessage");
+      var resultsList = document.getElementById("resultsList");
       var saveTrainingButton = document.getElementById("saveTrainingButton");
       var saveMessage = document.getElementById("saveMessage");
 
@@ -655,6 +741,29 @@
         request.send(body ? JSON.stringify(body) : null);
       }
 
+      function requestText(url, callback) {
+        if (window.fetch) {
+          window.fetch(url, { cache: "no-store" }).then(function (response) {
+            if (!response.ok) { throw new Error("Results could not be loaded. Please check the internet and try again."); }
+            return response.text();
+          }).then(function (data) { callback(null, data); })
+            .catch(function (error) { callback(error); });
+          return;
+        }
+        var request = new XMLHttpRequest();
+        request.open("GET", url, true);
+        request.onreadystatechange = function () {
+          if (request.readyState !== 4) { return; }
+          if (request.status < 200 || request.status >= 300) {
+            callback(new Error("Results could not be loaded. Please check the internet and try again."));
+            return;
+          }
+          callback(null, request.responseText);
+        };
+        request.onerror = function () { callback(new Error("Results could not be loaded. Please check the internet and try again.")); };
+        request.send(null);
+      }
+
       function loadPlayers() {
         requestJson("GET", API_URL + "?action=players", null, function (error, data) {
           var html = '<option value="">Choose your name</option>';
@@ -663,6 +772,8 @@
           if (error) {
             playerMessage.innerHTML = escapeHtml(error.message);
             playerSelect.innerHTML = '<option value="">Players unavailable</option>';
+            resultsMessage.innerHTML = escapeHtml(error.message);
+            resultsPlayerSelect.innerHTML = '<option value="">Players unavailable</option>';
             return;
           }
           players = data.players || [];
@@ -670,10 +781,17 @@
             html += '<option value="' + escapeHtml(players[i].playerId) + '">' + escapeHtml(players[i].displayName) + '</option>';
           }
           playerSelect.innerHTML = html;
+          resultsPlayerSelect.innerHTML = html;
           playerSelect.disabled = false;
+          resultsPlayerSelect.disabled = false;
           playerMessage.innerHTML = "Choose the player whose results will be saved.";
+          resultsMessage.innerHTML = "Choose a player to see their training history.";
           try { saved = window.localStorage.getItem("ocheTrainingPlayerId") || ""; } catch (ignore) {}
-          if (saved) { playerSelect.value = saved; selectPlayer(); }
+          if (saved) {
+            playerSelect.value = saved;
+            resultsPlayerSelect.value = saved;
+            selectPlayer();
+          }
         });
       }
 
@@ -685,11 +803,228 @@
         }
         if (selectedPlayer) {
           playerMessage.innerHTML = "Training will be saved for " + escapeHtml(selectedPlayer.displayName) + ".";
+          resultsPlayerSelect.value = selectedPlayer.playerId;
           try { window.localStorage.setItem("ocheTrainingPlayerId", selectedPlayer.playerId); } catch (ignore) {}
         } else {
           playerMessage.innerHTML = "Choose the player whose results will be saved.";
         }
         renderSchedule();
+      }
+
+      function selectResultsPlayer() {
+        playerSelect.value = resultsPlayerSelect.value;
+        selectPlayer();
+        if (selectedPlayer) {
+          loadResults(selectedPlayer.playerId);
+        } else {
+          resultsLoadToken += 1;
+          resultsMessage.innerHTML = "Choose a player to see their training history.";
+          renderResults([]);
+        }
+      }
+
+      function parseCsv(text) {
+        var rows = [];
+        var row = [];
+        var field = "";
+        var quoted = false;
+        var i, character;
+        for (i = 0; i < text.length; i += 1) {
+          character = text.charAt(i);
+          if (quoted) {
+            if (character === '"' && text.charAt(i + 1) === '"') {
+              field += '"';
+              i += 1;
+            } else if (character === '"') {
+              quoted = false;
+            } else {
+              field += character;
+            }
+          } else if (character === '"') {
+            quoted = true;
+          } else if (character === ",") {
+            row.push(field);
+            field = "";
+          } else if (character === "\n") {
+            row.push(field.replace(/\r$/, ""));
+            rows.push(row);
+            row = [];
+            field = "";
+          } else {
+            field += character;
+          }
+        }
+        if (field !== "" || row.length) {
+          row.push(field.replace(/\r$/, ""));
+          rows.push(row);
+        }
+        return rows;
+      }
+
+      function resultRowsFromCsv(text) {
+        var rows = parseCsv(text);
+        var headers = rows.length ? rows[0] : [];
+        var resultsData = [];
+        var i, j, item;
+        for (i = 1; i < rows.length; i += 1) {
+          if (!rows[i].length || !rows[i][0]) { continue; }
+          item = {};
+          for (j = 0; j < headers.length; j += 1) { item[headers[j]] = rows[i][j] || ""; }
+          resultsData.push(item);
+        }
+        resultsData.sort(function (a, b) {
+          return String(a.Submitted_At_UTC || a.Training_Date).localeCompare(String(b.Submitted_At_UTC || b.Training_Date));
+        });
+        return resultsData;
+      }
+
+      function numeric(value, fallback) {
+        var number = Number(value);
+        return value !== "" && isFinite(number) ? number : fallback;
+      }
+
+      function performanceValue(row) {
+        var id = row.Routine_ID;
+        var score = numeric(row.Score, 0);
+        var hits = numeric(row.Hits, 0);
+        var time = numeric(row.Time_Seconds, 0);
+        var progress = numeric(row.Progress_Value, 0);
+        var rounds = numeric(row.Rounds_Played, 0);
+        var status = String(row.Status || "").toUpperCase();
+
+        if (id === "around-clock-singles" || id === "checkout-golf") { return -1 * (id === "checkout-golf" ? score : time); }
+        if (id === "around-clock-doubles") {
+          return status === "COMPLETE" ? 2000 + (1200 - time) : progress * 50;
+        }
+        if (id === "bobs-27") { return progress * 1000 + score; }
+        if (id === "checkout-bounce") {
+          if (status === "WIN") { return 3000 + (1200 - time); }
+          if (status === "TIMEOUT") { return 1000 + progress; }
+          return progress;
+        }
+        if (id === "killer-checkouts") {
+          return status === "WIN" ? 3000 - rounds : rounds;
+        }
+        if (id === "one-at-double" || id === "favourite-doubles" || id === "eight-of-32-40") { return hits; }
+        if (id === "41-and-up") { return progress; }
+        return score;
+      }
+
+      function shortDate(row) {
+        var raw = row.Training_Date || row.Submitted_At_UTC || "";
+        var parts = String(raw).substring(0, 10).split("-");
+        var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        if (parts.length === 3 && months[Number(parts[1]) - 1]) { return Number(parts[2]) + " " + months[Number(parts[1]) - 1]; }
+        return raw || "Unknown date";
+      }
+
+      function sparkline(rows) {
+        var visible = rows.length > 30 ? rows.slice(rows.length - 30) : rows;
+        var values = [];
+        var minimum, maximum, range, path = "", points = "";
+        var i, x, y, value;
+        for (i = 0; i < visible.length; i += 1) { values.push(performanceValue(visible[i])); }
+        minimum = Math.min.apply(Math, values);
+        maximum = Math.max.apply(Math, values);
+        range = maximum - minimum;
+        for (i = 0; i < visible.length; i += 1) {
+          value = values[i];
+          x = visible.length === 1 ? 500 : 14 + (i * 972 / (visible.length - 1));
+          y = range === 0 ? 52 : 90 - ((value - minimum) / range * 76);
+          path += (i === 0 ? "M" : " L") + x.toFixed(1) + " " + y.toFixed(1);
+          points += '<circle class="spark-point" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="5"></circle>';
+        }
+        if (visible.length === 1) { path = "M14 52 L986 52"; }
+        return '<div class="spark-wrap"><svg viewBox="0 0 1000 105" preserveAspectRatio="none" role="img" aria-label="Performance trend over time">' +
+          '<line class="spark-axis" x1="14" y1="90" x2="986" y2="90"></line>' +
+          '<path class="spark-line" d="' + path + '"></path>' + points + '</svg></div>' +
+          '<div class="spark-dates"><span class="spark-date-first">' + escapeHtml(shortDate(visible[0])) + '</span><span class="spark-date-last">' +
+          escapeHtml(shortDate(visible[visible.length - 1])) + '</span></div>';
+      }
+
+      function renderResults(data) {
+        var categories = ["Scoring", "Doubles", "Checkouts"];
+        var html = "";
+        var c, i, j, routine, rows, first, last, best, firstValue, lastValue, badge, badgeClass;
+        for (c = 0; c < categories.length; c += 1) {
+          html += '<section class="results-category"><div class="category-head"><h2>' + categories[c] + '</h2></div>';
+          for (i = 0; i < routines.length; i += 1) {
+            routine = routines[i];
+            if (routine.category !== categories[c]) { continue; }
+            rows = [];
+            for (j = 0; j < data.length; j += 1) {
+              if (data[j].Routine_ID === routine.id) { rows.push(data[j]); }
+            }
+            badge = "No results";
+            badgeClass = "";
+            if (rows.length) {
+              first = rows[0];
+              last = rows[rows.length - 1];
+              best = rows[0];
+              for (j = 1; j < rows.length; j += 1) {
+                if (performanceValue(rows[j]) > performanceValue(best)) { best = rows[j]; }
+              }
+              if (rows.length === 1) {
+                badge = "First result";
+              } else {
+                firstValue = performanceValue(first);
+                lastValue = performanceValue(last);
+                badge = lastValue > firstValue ? "Improving" : (lastValue < firstValue ? "Down" : "Level");
+                badgeClass = lastValue > firstValue ? " up" : (lastValue < firstValue ? " down" : "");
+              }
+            }
+            html += '<article class="result-card"><div class="result-card-head"><h3>' + escapeHtml(routine.title) + '</h3><span class="trend-badge' + badgeClass + '">' + badge + '</span></div>';
+            html += '<div class="result-stats"><div class="result-stat"><div class="result-stat-inner"><span class="result-stat-label">Attempts</span><span class="result-stat-value">' + rows.length + '</span></div></div>';
+            html += '<div class="result-stat"><div class="result-stat-inner"><span class="result-stat-label">Latest</span><span class="result-stat-value">' + (rows.length ? escapeHtml(last.Result_Display || last.Status) : "—") + '</span></div></div>';
+            html += '<div class="result-stat"><div class="result-stat-inner"><span class="result-stat-label">Best</span><span class="result-stat-value">' + (rows.length ? escapeHtml(best.Result_Display || best.Status) : "—") + '</span></div></div><div class="clear"></div></div>';
+            html += rows.length ? sparkline(rows) : '<div class="empty-spark">No results recorded yet</div>';
+            html += '</article>';
+          }
+          html += '</section>';
+        }
+        resultsList.innerHTML = html;
+      }
+
+      function loadResults(playerId) {
+        var query = "select * where F = " + Number(playerId);
+        var loadToken = resultsLoadToken + 1;
+        var playerName = selectedPlayer ? selectedPlayer.displayName : "this player";
+        resultsLoadToken = loadToken;
+        resultsMessage.innerHTML = "Loading results…";
+        resultsList.innerHTML = '<p class="empty">Loading routines…</p>';
+        requestText(RESULTS_CSV_URL + "&tq=" + encodeURIComponent(query), function (error, text) {
+          var data;
+          if (loadToken !== resultsLoadToken) { return; }
+          if (error) {
+            resultsMessage.innerHTML = escapeHtml(error.message);
+            resultsList.innerHTML = '<p class="empty">Results are unavailable right now.</p>';
+            return;
+          }
+          data = resultRowsFromCsv(text);
+          resultsMessage.innerHTML = data.length + " saved result" + (data.length === 1 ? "" : "s") + " for " + escapeHtml(playerName) + ".";
+          renderResults(data);
+        });
+      }
+
+      function showResultsView() {
+        stopTimer();
+        builderView.className = "hidden";
+        playView.className = "play-screen hidden";
+        resultsView.className = "";
+        if (selectedPlayer) {
+          resultsPlayerSelect.value = selectedPlayer.playerId;
+          loadResults(selectedPlayer.playerId);
+        } else {
+          renderResults([]);
+        }
+        window.scrollTo(0, 0);
+      }
+
+      function showTrainingView() {
+        resultsView.className = "hidden";
+        playView.className = "play-screen hidden";
+        builderView.className = "";
+        window.scrollTo(0, 0);
       }
 
       function isSelected(id) {
@@ -1089,12 +1424,16 @@
       function returnToBuilder() {
         stopTimer();
         playView.className = "play-screen hidden";
+        resultsView.className = "hidden";
         builderView.className = "";
         window.scrollTo(0, 0);
       }
 
       playButton.onclick = startSchedule;
       playerSelect.onchange = selectPlayer;
+      resultsPlayerSelect.onchange = selectResultsPlayer;
+      document.getElementById("openResultsButton").onclick = showResultsView;
+      document.getElementById("openTrainingButton").onclick = showTrainingView;
       document.getElementById("backButton").onclick = returnToBuilder;
       document.getElementById("finishButton").onclick = returnToBuilder;
       document.getElementById("timerStart").onclick = startTimer;
@@ -1109,6 +1448,7 @@
 
       renderLibrary();
       renderSchedule();
+      renderResults([]);
       loadPlayers();
     }());
   </script>
