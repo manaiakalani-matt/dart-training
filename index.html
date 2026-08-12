@@ -17,7 +17,7 @@
       font-size: 17px;
       line-height: 1.45;
     }
-    button, input { font: inherit; }
+    button, input, select { font: inherit; }
     button { -webkit-appearance: none; appearance: none; cursor: pointer; }
     button:disabled { cursor: default; opacity: .45; }
     .wrap { width: 92%; max-width: 1020px; margin: 0 auto; }
@@ -52,6 +52,25 @@
       text-decoration: none;
       background: #fffdf8;
     }
+    .player-box {
+      max-width: 520px;
+      margin: 22px 0 8px;
+      padding: 18px;
+      background: #fffdf8;
+      border: 1px solid #d6cfc2;
+      border-radius: 10px;
+    }
+    .player-box label { display: block; margin-bottom: 7px; color: #17352d; font-weight: bold; }
+    .player-box select {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #9f988c;
+      border-radius: 7px;
+      background: #fff;
+      color: #17231f;
+      font-size: 19px;
+    }
+    .player-message { min-height: 22px; margin: 7px 0 0; color: #6a4a2f; font-size: 14px; }
     .library { padding-bottom: 30px; }
     .category { padding-top: 28px; }
     .category-head { border-bottom: 2px solid #cfc7b8; margin-bottom: 16px; }
@@ -130,6 +149,7 @@
     .play-head { overflow: hidden; margin-bottom: 32px; }
     .back-button { float: left; padding: 9px 12px; border: 1px solid #a9a194; border-radius: 7px; background: #fffdf8; color: #17352d; }
     .progress { float: right; padding-top: 9px; color: #56635e; font-weight: bold; }
+    .player-badge { clear: both; padding-top: 10px; color: #17352d; font-weight: bold; text-align: right; }
     .routine-panel { max-width: 720px; margin: 0 auto; padding: 30px; background: #fffdf8; border: 1px solid #d4ccbe; border-radius: 14px; }
     .routine-panel h1 { margin-bottom: 10px; }
     .rules { margin: 22px 0; }
@@ -140,14 +160,19 @@
     .timer { font-family: "Courier New", monospace; font-size: 52px; line-height: 1; letter-spacing: .03em; }
     .timer-controls { margin-top: 17px; }
     .timer-controls button { margin: 0 4px 7px; padding: 9px 16px; border: 0; border-radius: 6px; background: #fff; color: #17352d; font-weight: bold; }
-    .result-field { margin-top: 22px; }
+    .result-fields { margin: 22px -5px 0; overflow: hidden; }
+    .result-field { float: left; width: 50%; padding: 0 5px 10px; }
+    .result-field.full { width: 100%; }
     .result-field label { display: block; margin-bottom: 7px; font-weight: bold; }
-    .result-field input { width: 100%; padding: 13px; border: 1px solid #9f988c; border-radius: 7px; background: #fff; font-size: 20px; }
+    .result-field input, .result-field select { width: 100%; padding: 13px; border: 1px solid #9f988c; border-radius: 7px; background: #fff; font-size: 20px; }
     .next-button { width: 100%; margin-top: 18px; padding: 14px; border: 0; border-radius: 8px; background: #17352d; color: #fff; font-weight: bold; }
     .error { min-height: 24px; margin: 8px 0 0; color: #a43c27; font-weight: bold; }
     .summary-list { margin: 22px 0; padding: 0; list-style: none; }
     .summary-list li { padding: 13px 0; border-bottom: 1px solid #d8d1c5; }
     .summary-result { float: right; font-weight: bold; }
+    .save-message { min-height: 24px; margin: 12px 0 0; font-weight: bold; }
+    .save-message.good { color: #25633f; }
+    .save-message.bad { color: #a43c27; }
     .clear { clear: both; }
     @media (max-width: 700px) {
       h1 { font-size: 31px; }
@@ -155,6 +180,7 @@
       .card { min-height: 0; }
       .routine-panel { padding: 22px; }
       .timer { font-size: 44px; }
+      .result-field { float: none; width: 100%; }
     }
   </style>
 </head>
@@ -172,6 +198,13 @@
         <p class="eyebrow">Build a session</p>
         <h1>What do you want to practise?</h1>
         <p class="intro-copy">Choose any routines, add them to your schedule, then press play. Each routine records one useful result.</p>
+        <div class="player-box">
+          <label for="playerSelect">Who is training?</label>
+          <select id="playerSelect" disabled>
+            <option value="">Loading players…</option>
+          </select>
+          <p id="playerMessage" class="player-message">Connecting to the training log…</p>
+        </div>
         <nav class="category-nav" aria-label="Routine categories">
           <a href="#scoring">Scoring</a>
           <a href="#doubles">Doubles</a>
@@ -196,6 +229,7 @@
       <div class="play-head">
         <button id="backButton" class="back-button" type="button">← Back to routines</button>
         <div id="progress" class="progress"></div>
+        <div id="playerBadge" class="player-badge"></div>
       </div>
 
       <section id="routinePanel" class="routine-panel">
@@ -218,20 +252,19 @@
           </div>
         </div>
 
-        <div class="result-field">
-          <label id="resultLabel" for="resultInput">Result</label>
-          <input id="resultInput" type="text" inputmode="decimal" autocomplete="off">
-        </div>
+        <div id="resultFields" class="result-fields"></div>
         <p id="resultError" class="error" role="alert"></p>
         <button id="nextButton" class="next-button" type="button">Save result &amp; continue</button>
       </section>
 
       <section id="summaryPanel" class="routine-panel hidden">
         <p class="eyebrow">Session complete</p>
-        <h1>Training recorded.</h1>
-        <p>These results can be sent to Google Sheets when the save connection is added later.</p>
+        <h1>Ready to save.</h1>
+        <p id="summaryCopy">Check the results below, then save this session to the training log.</p>
         <ul id="summaryList" class="summary-list"></ul>
-        <button id="finishButton" class="next-button" type="button">Back to routines</button>
+        <button id="saveTrainingButton" class="next-button" type="button">Save training</button>
+        <p id="saveMessage" class="save-message" role="status"></p>
+        <button id="finishButton" class="next-button hidden" type="button">Back to routines</button>
       </section>
     </div>
   </div>
@@ -239,6 +272,9 @@
   <script>
     (function () {
       "use strict";
+
+      var API_URL = "https://script.google.com/macros/s/AKfycbz5nJ3_BP8kQt4Cjhwjn3FzGtonRsTsYLz_xjLbUG6UbG2p3lxMat4MDujeTypk0C6KHw/exec";
+      var CLIENT_VERSION = "1.1.0";
 
       var routines = [
         {
@@ -250,8 +286,8 @@
           setup: "Play four blocks in this order: 20, 19, 18 and Bull. Each block is 12 darts (four visits).",
           rules: "Only darts in the nominated segment count. Singles, doubles and trebles score their normal face value. On Bull, outer Bull scores 25 and inner Bull scores 50. Every dart outside the target scores zero. Keep one total for each block.",
           finish: "The routine ends after the 48th dart. There is no time limit and no failure state.",
-          outcome: "Add the four block scores together. Record the combined score; a higher score than your previous attempt is the goal.",
-          resultLabel: "Combined score",
+          outcome: "Record the four block scores. The app adds them together; a higher combined score than your previous attempt is the goal.",
+          resultLabel: "Four target scores",
           resultHint: "Enter the total from all four blocks",
           timerMode: false
         },
@@ -279,8 +315,8 @@
           setup: "Play five runs on the 20 segment, then five runs on the 19 segment. Begin every run at zero.",
           rules: "A single in the target scores 1 mark, a double scores 2 and a treble scores 3. Continue throwing while every dart stays in the target segment. A dart in a neighbouring number, a miss or a bounce-out ends that run immediately.",
           finish: "The routine ends after five completed runs on 20 and five completed runs on 19.",
-          outcome: "Record the highest single run from the ten attempts. Higher is better; try to beat your previous best streak.",
-          resultLabel: "Best run",
+          outcome: "Record your best run on 20 and your best run on 19. Higher is better; try to improve both scoring corridors.",
+          resultLabel: "Best runs on 20 and 19",
           resultHint: "Enter the highest mark total from one run",
           timerMode: false
         },
@@ -293,8 +329,8 @@
           setup: "Play three separate rounds. Each round is 24 darts (eight visits) scored exactly as you would score in a leg of 501.",
           rules: "Aim at your normal scoring target and use normal board values. You may switch targets for a blocked bed or cover shot. Keep a total for each 24-dart round, then write the three totals from lowest to highest.",
           finish: "The routine ends after all three 24-dart rounds are complete.",
-          outcome: "Record the middle of the three totals (the median), not the highest. A higher median than your previous session is the goal.",
-          resultLabel: "Median score",
+          outcome: "Record all three round totals. The app calculates the median; a higher median than your previous session is the goal.",
+          resultLabel: "Three round scores",
           resultHint: "Enter the middle of your three round totals",
           timerMode: false
         },
@@ -366,8 +402,8 @@
           setup: "Begin with 27 points. Throw one visit at D1, then D2 and continue through D20 before finishing with inner Bull.",
           rules: "For every hit, add that double's value: one D8 adds 16, two D8s add 32, and inner Bull adds 50 per hit. If all three darts miss the target, subtract the target's value once. Then move to the next double.",
           finish: "Lose immediately if the running score falls below zero. Win by completing the Bull visit with a score of zero or more.",
-          outcome: "Record the score at the moment you lose, including a negative score, or your final score after Bull if you complete the board.",
-          resultLabel: "Final score",
+          outcome: "Record the final score and the last double reached. This separates an early loss from a run that progressed farther around the board.",
+          resultLabel: "Final score and progress",
           resultHint: "Enter your finishing score, including minus if needed",
           timerMode: false
         },
@@ -380,8 +416,8 @@
           setup: "Play four blocks in this order: D20, D16, D10 and D8. Each block is 12 darts (four visits).",
           rules: "Only the nominated double scores. Every successful dart counts as 1 hit; singles, trebles and neighbouring doubles score zero. Keep one hit count for each block.",
           finish: "The routine ends after 12 darts at each of the four doubles: 48 darts total.",
-          outcome: "Add the four blocks and record successful doubles out of 48. Higher is better.",
-          resultLabel: "Hits out of 48",
+          outcome: "Record the hits for each double. The app adds the four blocks and records successful doubles out of 48.",
+          resultLabel: "Hits at each double",
           resultHint: "Enter your total successful doubles",
           timerMode: false
         },
@@ -392,11 +428,11 @@
           description: "Practise two common finishes and the recovery doubles they create.",
           format: "16 attempts",
           setup: "Make eight checkout attempts from 32, followed by eight checkout attempts from 40. Each attempt allows a maximum of three darts.",
-          rules: "Use normal double-out rules. If the checkout is completed, score its full starting value: 32 points or 40 points. If you fail or bust, score zero for that attempt. Begin every new attempt from the original number.",
+          rules: "Use normal double-out rules. Count one success when the checkout is completed within three darts. A failure or bust scores no success. Begin every new attempt from the original number.",
           finish: "The routine ends after all 16 attempts: 48 darts maximum.",
-          outcome: "Add the successful checkout values. The maximum is 576 points (8 × 32 plus 8 × 40). Higher is better.",
-          resultLabel: "Points out of 576",
-          resultHint: "Enter your total points",
+          outcome: "Record how many of the eight attempts you completed from 32 and how many you completed from 40. The app totals the successes out of 16.",
+          resultLabel: "Successful checkouts from 32 and 40",
+          resultHint: "Enter the two success counts",
           timerMode: false
         },
         {
@@ -466,15 +502,71 @@
           setup: "Use checkout 60 for every round and begin with five lives. Each round allows a maximum of six darts.",
           rules: "Complete 60 within six darts to gain one life. Fail to complete it, or use all six darts after a bust, and lose one life. Reset to 60 at the start of every round.",
           finish: "Win when you reach 12 lives. Lose when your lives reach zero.",
-          outcome: "Record WIN 12 or LOSS 0. If you stop early, record the number of lives remaining.",
-          resultLabel: "Final lives or outcome",
+          outcome: "Record the win or loss, final lives and total rounds played. This shows how long the survival run lasted.",
+          resultLabel: "Outcome, lives and rounds",
           resultHint: "For example WIN 12, LOSS 0 or 7 lives",
           timerMode: false
         }
       ];
 
+      var resultDefinitions = {
+        "twelve-dart-targets": { fields: [
+          { key: "score_20", label: "Score at 20", min: 0, max: 720 },
+          { key: "score_19", label: "Score at 19", min: 0, max: 684 },
+          { key: "score_18", label: "Score at 18", min: 0, max: 648 },
+          { key: "score_bull", label: "Score at Bull", min: 0, max: 600 }
+        ]},
+        "around-clock-singles": { fields: [{ key: "time_seconds", label: "Completion time (MM:SS)", type: "time", min: 1 }]},
+        "straight-20-19": { fields: [
+          { key: "best_20", label: "Best run on 20", min: 0 },
+          { key: "best_19", label: "Best run on 19", min: 0 }
+        ]},
+        "24-dart-high-score": { fields: [
+          { key: "round_1", label: "Round 1 score", min: 0, max: 1440 },
+          { key: "round_2", label: "Round 2 score", min: 0, max: 1440 },
+          { key: "round_3", label: "Round 3 score", min: 0, max: 1440 }
+        ]},
+        "cricket-scoring": { fields: [{ key: "score", label: "Marks out of 60", min: 0, max: 60 }]},
+        "round-board-hits": { fields: [{ key: "score", label: "Marks out of 180", min: 0, max: 180 }]},
+        "around-clock-doubles": { statuses: ["COMPLETE", "TIMEOUT"], fields: [
+          { key: "time_seconds", label: "Elapsed time (MM:SS)", type: "time", min: 0, max: 1200 },
+          { key: "progress_value", label: "Last target reached (D1–D20, Bull = 21)", min: 1, max: 21 }
+        ]},
+        "one-at-double": { fields: [{ key: "hits", label: "Hits out of 63", min: 0, max: 63 }]},
+        "bobs-27": { statuses: ["COMPLETE", "LOSS"], fields: [
+          { key: "score", label: "Final score" },
+          { key: "progress_value", label: "Last target reached (D1–D20, Bull = 21)", min: 1, max: 21 }
+        ]},
+        "favourite-doubles": { fields: [
+          { key: "hits_d20", label: "Hits at D20", min: 0, max: 12 },
+          { key: "hits_d16", label: "Hits at D16", min: 0, max: 12 },
+          { key: "hits_d10", label: "Hits at D10", min: 0, max: 12 },
+          { key: "hits_d8", label: "Hits at D8", min: 0, max: 12 }
+        ]},
+        "eight-of-32-40": { fields: [
+          { key: "checkouts_32", label: "32 checkouts made (out of 8)", min: 0, max: 8 },
+          { key: "checkouts_40", label: "40 checkouts made (out of 8)", min: 0, max: 8 }
+        ]},
+        "41-and-up": { statuses: ["COMPLETE", "LOSS"], fields: [
+          { key: "progress_value", label: "Highest checkout completed", min: 40, max: 60 }
+        ]},
+        "checkout-bounce": { statuses: ["WIN", "LOSS", "TIMEOUT"], fields: [
+          { key: "progress_value", label: "Final checkout", min: 80, max: 120 },
+          { key: "time_seconds", label: "Elapsed time (MM:SS)", type: "time", min: 0, max: 1200 }
+        ]},
+        "checkout-golf": { fields: [{ key: "score", label: "Total darts", min: 18, max: 126 }]},
+        "club-checkouts": { fields: [{ key: "score", label: "Points out of 39", min: 0, max: 39 }]},
+        "killer-checkouts": { statuses: ["WIN", "LOSS"], fields: [
+          { key: "final_lives", label: "Final lives", min: 0, max: 12 },
+          { key: "rounds_played", label: "Rounds played", min: 1 }
+        ]}
+      };
+
       var selected = [];
       var results = [];
+      var players = [];
+      var selectedPlayer = null;
+      var sessionId = "";
       var currentIndex = 0;
       var timerId = null;
       var timerStartedAt = 0;
@@ -489,11 +581,15 @@
       var playView = document.getElementById("playView");
       var routinePanel = document.getElementById("routinePanel");
       var summaryPanel = document.getElementById("summaryPanel");
-      var resultInput = document.getElementById("resultInput");
+      var resultFields = document.getElementById("resultFields");
       var resultError = document.getElementById("resultError");
       var nextButton = document.getElementById("nextButton");
       var timerBox = document.getElementById("timerBox");
       var timerDisplay = document.getElementById("timerDisplay");
+      var playerSelect = document.getElementById("playerSelect");
+      var playerMessage = document.getElementById("playerMessage");
+      var saveTrainingButton = document.getElementById("saveTrainingButton");
+      var saveMessage = document.getElementById("saveMessage");
 
       function findRoutine(id) {
         var i;
@@ -501,6 +597,99 @@
           if (routines[i].id === id) { return routines[i]; }
         }
         return null;
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+      }
+
+      function makeId(prefix) {
+        return prefix + "_" + new Date().getTime().toString(36) + "_" + Math.random().toString(36).substring(2, 10);
+      }
+
+      function getDeviceId() {
+        var id = "";
+        try { id = window.localStorage.getItem("ocheTrainingDeviceId") || ""; } catch (ignore) {}
+        if (!id) {
+          id = makeId("device");
+          try { window.localStorage.setItem("ocheTrainingDeviceId", id); } catch (ignoreAgain) {}
+        }
+        return id;
+      }
+
+      function requestJson(method, url, body, callback) {
+        var options;
+        if (window.fetch) {
+          options = { method: method, cache: "no-store" };
+          if (method === "POST") {
+            options.headers = { "Content-Type": "text/plain;charset=utf-8" };
+            options.body = JSON.stringify(body);
+          }
+          window.fetch(url, options).then(function (response) {
+            if (!response.ok) { throw new Error("Connection failed. Please check the internet and try again."); }
+            return response.json();
+          }).then(function (data) {
+            if (!data.ok) { throw new Error(data.error || "The training service reported an error."); }
+            callback(null, data);
+          }).catch(function (error) { callback(error); });
+          return;
+        }
+        var request = new XMLHttpRequest();
+        request.open(method, url, true);
+        if (method === "POST") { request.setRequestHeader("Content-Type", "text/plain;charset=utf-8"); }
+        request.onreadystatechange = function () {
+          var data;
+          if (request.readyState !== 4) { return; }
+          if (request.status < 200 || request.status >= 300) {
+            callback(new Error("Connection failed. Please check the internet and try again."));
+            return;
+          }
+          try { data = JSON.parse(request.responseText); } catch (error) {
+            callback(new Error("The training service returned an unreadable response."));
+            return;
+          }
+          if (!data.ok) { callback(new Error(data.error || "The training service reported an error.")); return; }
+          callback(null, data);
+        };
+        request.onerror = function () { callback(new Error("Connection failed. Please check the internet and try again.")); };
+        request.send(body ? JSON.stringify(body) : null);
+      }
+
+      function loadPlayers() {
+        requestJson("GET", API_URL + "?action=players", null, function (error, data) {
+          var html = '<option value="">Choose your name</option>';
+          var saved = "";
+          var i;
+          if (error) {
+            playerMessage.innerHTML = escapeHtml(error.message);
+            playerSelect.innerHTML = '<option value="">Players unavailable</option>';
+            return;
+          }
+          players = data.players || [];
+          for (i = 0; i < players.length; i += 1) {
+            html += '<option value="' + escapeHtml(players[i].playerId) + '">' + escapeHtml(players[i].displayName) + '</option>';
+          }
+          playerSelect.innerHTML = html;
+          playerSelect.disabled = false;
+          playerMessage.innerHTML = "Choose the player whose results will be saved.";
+          try { saved = window.localStorage.getItem("ocheTrainingPlayerId") || ""; } catch (ignore) {}
+          if (saved) { playerSelect.value = saved; selectPlayer(); }
+        });
+      }
+
+      function selectPlayer() {
+        var i;
+        selectedPlayer = null;
+        for (i = 0; i < players.length; i += 1) {
+          if (String(players[i].playerId) === String(playerSelect.value)) { selectedPlayer = players[i]; break; }
+        }
+        if (selectedPlayer) {
+          playerMessage.innerHTML = "Training will be saved for " + escapeHtml(selectedPlayer.displayName) + ".";
+          try { window.localStorage.setItem("ocheTrainingPlayerId", selectedPlayer.playerId); } catch (ignore) {}
+        } else {
+          playerMessage.innerHTML = "Choose the player whose results will be saved.";
+        }
+        renderSchedule();
       }
 
       function isSelected(id) {
@@ -573,7 +762,7 @@
 
         scheduleList.innerHTML = html;
         emptySchedule.className = selected.length ? "empty hidden" : "empty";
-        playButton.disabled = selected.length === 0;
+        playButton.disabled = selected.length === 0 || !selectedPlayer;
 
         var buttons = scheduleList.getElementsByTagName("button");
         for (i = 0; i < buttons.length; i += 1) {
@@ -584,13 +773,19 @@
       }
 
       function startSchedule() {
-        if (!selected.length) { return; }
+        if (!selected.length || !selectedPlayer) {
+          playerMessage.innerHTML = "Choose who is training before pressing Play.";
+          playerSelect.focus();
+          return;
+        }
         results = [];
+        sessionId = makeId("session");
         currentIndex = 0;
         builderView.className = "hidden";
         playView.className = "play-screen";
         routinePanel.className = "routine-panel";
         summaryPanel.className = "routine-panel hidden";
+        document.getElementById("playerBadge").innerHTML = "Training: " + escapeHtml(selectedPlayer.displayName);
         showRoutine();
         window.scrollTo(0, 0);
       }
@@ -610,13 +805,42 @@
         document.getElementById("playRules").innerHTML = routine.rules;
         document.getElementById("playFinish").innerHTML = routine.finish;
         document.getElementById("playOutcome").innerHTML = routine.outcome;
-        document.getElementById("resultLabel").innerHTML = routine.resultLabel;
-        resultInput.value = "";
-        resultInput.setAttribute("placeholder", routine.resultHint);
+        renderResultFields(routine);
         resultError.innerHTML = "";
         timerBox.className = routine.timerMode ? "timer-box" : "timer-box hidden";
         document.getElementById("timerStart").innerHTML = routine.timerMode === "countdown" ? "Start countdown" : "Start stopwatch";
         nextButton.innerHTML = currentIndex === selected.length - 1 ? "Save result & finish" : "Save result & continue";
+      }
+
+      function renderResultFields(routine) {
+        var definition = resultDefinitions[routine.id];
+        var html = "";
+        var i, field, status;
+        if (!definition) { resultFields.innerHTML = ""; return; }
+
+        if (definition.statuses) {
+          html += '<div class="result-field full"><label for="resultStatus">Outcome</label><select id="resultStatus">';
+          for (i = 0; i < definition.statuses.length; i += 1) {
+            status = definition.statuses[i];
+            html += '<option value="' + status + '">' + status.charAt(0) + status.substring(1).toLowerCase() + '</option>';
+          }
+          html += '</select></div>';
+        }
+
+        for (i = 0; i < definition.fields.length; i += 1) {
+          field = definition.fields[i];
+          html += '<div class="result-field' + (definition.fields.length === 1 ? ' full' : '') + '">';
+          html += '<label for="field_' + field.key + '">' + escapeHtml(field.label) + '</label>';
+          if (field.type === "time") {
+            html += '<input id="field_' + field.key + '" data-key="' + field.key + '" data-type="time" type="text" inputmode="numeric" placeholder="MM:SS" autocomplete="off">';
+          } else {
+            html += '<input id="field_' + field.key + '" data-key="' + field.key + '" data-type="number" type="number" inputmode="decimal" step="1"' +
+              (field.min !== undefined ? ' min="' + field.min + '"' : '') + (field.max !== undefined ? ' max="' + field.max + '"' : '') + ' autocomplete="off">';
+          }
+          html += '</div>';
+        }
+        html += '<div class="clear"></div>';
+        resultFields.innerHTML = html;
       }
 
       function pad(number) {
@@ -651,6 +875,8 @@
             timerId = null;
             timerExpired = true;
             timerDisplay.innerHTML = "00:00";
+            if (document.getElementById("resultStatus")) { document.getElementById("resultStatus").value = "TIMEOUT"; }
+            if (document.getElementById("field_time_seconds")) { document.getElementById("field_time_seconds").value = "20:00"; }
             resultError.innerHTML = routine.timeoutMessage;
             return;
           }
@@ -692,23 +918,19 @@
       }
 
       function saveAndContinue() {
-        var value = resultInput.value.replace(/^\s+|\s+$/g, "");
         var routine = findRoutine(selected[currentIndex]);
-
-        if (!value && routine.timerMode && routine.autoTimeResult && currentElapsed() > 0 && !timerExpired) {
-          pauseTimer();
-          value = formattedTime(elapsedBeforeStart);
-          resultInput.value = value;
-        }
-
-        if (!value) {
-          resultError.innerHTML = "Enter a result before continuing.";
-          resultInput.focus();
-          return;
-        }
-
         pauseTimer();
-        results.push({ title: routine.title, result: value, label: routine.resultLabel });
+        var collected = collectResult(routine);
+        if (!collected) { return; }
+        results.push({
+          attemptId: makeId("attempt"),
+          routineId: routine.id,
+          title: routine.title,
+          status: collected.status,
+          values: collected.values,
+          resultDisplay: collected.display,
+          notes: ""
+        });
         currentIndex += 1;
 
         if (currentIndex < selected.length) {
@@ -719,6 +941,93 @@
         }
       }
 
+      function parseTime(value) {
+        var clean = String(value).replace(/^\s+|\s+$/g, "");
+        var parts, minutes, seconds;
+        if (/^\d+:\d{1,2}$/.test(clean)) {
+          parts = clean.split(":");
+          minutes = Number(parts[0]);
+          seconds = Number(parts[1]);
+          if (seconds > 59) { return null; }
+          return (minutes * 60) + seconds;
+        }
+        if (/^\d+$/.test(clean)) { return Number(clean); }
+        return null;
+      }
+
+      function collectResult(routine) {
+        var definition = resultDefinitions[routine.id];
+        var statusElement = document.getElementById("resultStatus");
+        var status = statusElement ? statusElement.value : "COMPLETE";
+        var values = {};
+        var i, field, input, raw, number, elapsedSeconds;
+
+        elapsedSeconds = Math.round(currentElapsed() / 1000);
+        for (i = 0; i < definition.fields.length; i += 1) {
+          field = definition.fields[i];
+          input = document.getElementById("field_" + field.key);
+          raw = input ? input.value.replace(/^\s+|\s+$/g, "") : "";
+
+          if (!raw && field.key === "time_seconds" && elapsedSeconds > 0) {
+            number = elapsedSeconds;
+            raw = formattedTime(number * 1000);
+            if (input) { input.value = raw; }
+          } else if (field.type === "time") {
+            number = parseTime(raw);
+          } else if (raw !== "") {
+            number = Number(raw);
+          }
+
+          if (field.key === "progress_value" && status === "COMPLETE" && (routine.id === "around-clock-doubles" || routine.id === "bobs-27" || routine.id === "41-and-up")) {
+            number = routine.id === "41-and-up" ? 60 : 21;
+          }
+          if (routine.id === "checkout-bounce" && field.key === "progress_value" && status === "WIN") { number = 120; }
+          if (routine.id === "checkout-bounce" && field.key === "progress_value" && status === "LOSS") { number = 80; }
+          if (routine.id === "killer-checkouts" && field.key === "final_lives" && status === "WIN") { number = 12; }
+          if (routine.id === "killer-checkouts" && field.key === "final_lives" && status === "LOSS") { number = 0; }
+
+          if (number === null || number === undefined || number === "" || !isFinite(number)) {
+            resultError.innerHTML = "Enter " + escapeHtml(field.label.toLowerCase()) + ".";
+            if (input) { input.focus(); }
+            return null;
+          }
+          if (field.min !== undefined && number < field.min) {
+            resultError.innerHTML = escapeHtml(field.label) + " must be at least " + field.min + ".";
+            if (input) { input.focus(); }
+            return null;
+          }
+          if (field.max !== undefined && number > field.max) {
+            resultError.innerHTML = escapeHtml(field.label) + " cannot be more than " + field.max + ".";
+            if (input) { input.focus(); }
+            return null;
+          }
+          values[field.key] = number;
+        }
+        resultError.innerHTML = "";
+        return { status: status, values: values, display: displayResult(routine.id, status, values) };
+      }
+
+      function displayResult(id, status, v) {
+        var scores;
+        if (id === "twelve-dart-targets") { return (v.score_20 + v.score_19 + v.score_18 + v.score_bull) + " points"; }
+        if (id === "around-clock-singles") { return formattedTime(v.time_seconds * 1000); }
+        if (id === "straight-20-19") { return "20s: " + v.best_20 + " | 19s: " + v.best_19; }
+        if (id === "24-dart-high-score") { scores = [v.round_1, v.round_2, v.round_3]; scores.sort(function (a, b) { return a - b; }); return "Median " + scores[1]; }
+        if (id === "cricket-scoring") { return v.score + "/60 marks"; }
+        if (id === "round-board-hits") { return v.score + "/180 marks"; }
+        if (id === "around-clock-doubles") { return status === "COMPLETE" ? formattedTime(v.time_seconds * 1000) : "Reached target " + v.progress_value; }
+        if (id === "one-at-double") { return v.hits + "/63 hits"; }
+        if (id === "bobs-27") { return v.score + " points at target " + v.progress_value; }
+        if (id === "favourite-doubles") { return (v.hits_d20 + v.hits_d16 + v.hits_d10 + v.hits_d8) + "/48 hits"; }
+        if (id === "eight-of-32-40") { return (v.checkouts_32 + v.checkouts_40) + "/16 checkouts"; }
+        if (id === "41-and-up") { return "Completed through " + v.progress_value; }
+        if (id === "checkout-bounce") { return status + " at " + v.progress_value; }
+        if (id === "checkout-golf") { return v.score + " darts"; }
+        if (id === "club-checkouts") { return v.score + "/39 points"; }
+        if (id === "killer-checkouts") { return status + " with " + v.final_lives + " lives after " + v.rounds_played + " rounds"; }
+        return status;
+      }
+
       function showSummary() {
         var list = document.getElementById("summaryList");
         var html = "";
@@ -726,14 +1035,55 @@
         stopTimer();
 
         for (i = 0; i < results.length; i += 1) {
-          html += '<li><span>' + results[i].title + '</span><span class="summary-result">' + results[i].result + '</span><div class="clear"></div></li>';
+          html += '<li><span>' + escapeHtml(results[i].title) + '</span><span class="summary-result">' + escapeHtml(results[i].resultDisplay) + '</span><div class="clear"></div></li>';
         }
 
         list.innerHTML = html;
         routinePanel.className = "routine-panel hidden";
         summaryPanel.className = "routine-panel";
         document.getElementById("progress").innerHTML = "Complete";
+        saveTrainingButton.className = "next-button";
+        saveTrainingButton.disabled = false;
+        document.getElementById("finishButton").className = "next-button hidden";
+        saveMessage.className = "save-message";
+        saveMessage.innerHTML = "";
         window.scrollTo(0, 0);
+      }
+
+      function localDate() {
+        var date = new Date();
+        return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+      }
+
+      function saveTraining() {
+        var body = {
+          action: "saveSession",
+          sessionId: sessionId,
+          playerId: selectedPlayer.playerId,
+          trainingDate: localDate(),
+          timeZone: "Pacific/Auckland",
+          deviceId: getDeviceId(),
+          clientVersion: CLIENT_VERSION,
+          attempts: results
+        };
+        saveTrainingButton.disabled = true;
+        saveTrainingButton.innerHTML = "Saving…";
+        saveMessage.className = "save-message";
+        saveMessage.innerHTML = "Connecting to the training log…";
+        requestJson("POST", API_URL, body, function (error, data) {
+          if (error) {
+            saveTrainingButton.disabled = false;
+            saveTrainingButton.innerHTML = "Try saving again";
+            saveMessage.className = "save-message bad";
+            saveMessage.innerHTML = escapeHtml(error.message) + " Your results are still on this screen.";
+            return;
+          }
+          saveTrainingButton.className = "next-button hidden";
+          saveMessage.className = "save-message good";
+          saveMessage.innerHTML = data.saved + " routine result" + (data.saved === 1 ? "" : "s") + " saved for " + escapeHtml(selectedPlayer.displayName) + ".";
+          document.getElementById("summaryCopy").innerHTML = "Training saved successfully.";
+          document.getElementById("finishButton").className = "next-button";
+        });
       }
 
       function returnToBuilder() {
@@ -744,19 +1094,22 @@
       }
 
       playButton.onclick = startSchedule;
+      playerSelect.onchange = selectPlayer;
       document.getElementById("backButton").onclick = returnToBuilder;
       document.getElementById("finishButton").onclick = returnToBuilder;
       document.getElementById("timerStart").onclick = startTimer;
       document.getElementById("timerPause").onclick = pauseTimer;
       document.getElementById("timerReset").onclick = resetTimer;
       nextButton.onclick = saveAndContinue;
-      resultInput.onkeydown = function (event) {
+      saveTrainingButton.onclick = saveTraining;
+      resultFields.onkeydown = function (event) {
         event = event || window.event;
         if (event.keyCode === 13) { saveAndContinue(); }
       };
 
       renderLibrary();
       renderSchedule();
+      loadPlayers();
     }());
   </script>
 </body>
