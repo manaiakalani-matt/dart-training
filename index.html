@@ -176,6 +176,52 @@
     .timer { font-family: "Courier New", monospace; font-size: 52px; line-height: 1; letter-spacing: .03em; }
     .timer-controls { margin-top: 17px; }
     .timer-controls button { margin: 0 4px 7px; padding: 9px 16px; border: 0; border-radius: 6px; background: #fff; color: #17352d; font-weight: bold; }
+    .scorer {
+      margin: 18px 0 4px;
+      padding: 15px;
+      border: 1px solid #cfc7b8;
+      border-radius: 10px;
+      background: #f7f3eb;
+    }
+    .scorer-head { overflow: hidden; margin-bottom: 11px; }
+    .scorer-target { float: left; margin: 0; color: #17352d; font-size: 20px; font-weight: bold; }
+    .scorer-step { float: right; padding-top: 3px; color: #68726e; font-size: 14px; }
+    .scorer-score { margin: 0 0 11px; color: #52605a; font-size: 15px; }
+    .scorer-actions { display: flex; width: 100%; gap: 6px; }
+    .scorer-actions button {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 11px 3px;
+      border: 1px solid #17352d;
+      border-radius: 7px;
+      background: #17352d;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .scorer-entry { display: flex; width: 100%; }
+    .scorer-entry input {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid #9f988c;
+      border-radius: 7px 0 0 7px;
+      background: #fff;
+      font-size: 20px;
+    }
+    .scorer-entry button {
+      flex: 0 0 88px;
+      padding: 12px 8px;
+      border: 1px solid #17352d;
+      border-radius: 0 7px 7px 0;
+      background: #17352d;
+      color: #fff;
+      font-weight: bold;
+    }
+    .scorer-foot { min-height: 22px; margin-top: 9px; color: #68726e; font-size: 13px; }
+    .scorer-undo { float: right; padding: 0; border: 0; background: transparent; color: #6a4a2f; font-size: 13px; text-decoration: underline; }
+    .scorer.done { border-color: #9fb6ac; background: #e8f0ec; }
+    .scorer.done .scorer-target { color: #245443; }
     .result-fields { margin: 22px -5px 0; overflow: hidden; }
     .result-field { float: left; width: 50%; padding: 0 5px 10px; }
     .result-field.full { width: 100%; }
@@ -337,6 +383,7 @@
           </div>
         </div>
 
+        <div id="scorerBox" class="scorer hidden"></div>
         <div id="resultFields" class="result-fields"></div>
         <p id="resultError" class="error" role="alert"></p>
         <button id="nextButton" class="next-button" type="button">Save result &amp; continue</button>
@@ -361,7 +408,7 @@
       var API_URL = "https://script.google.com/macros/s/AKfycbz5nJ3_BP8kQt4Cjhwjn3FzGtonRsTsYLz_xjLbUG6UbG2p3lxMat4MDujeTypk0C6KHw/exec";
       var RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Zi0OHmTvxZOpkgBy7TcrKQW8lu7QQjtIOhxV65Icl2g/gviz/tq?tqx=out:csv&gid=990006";
       var RESULTS_ONLY_PLAYER_ID = "646";
-      var CLIENT_VERSION = "1.3.0";
+      var CLIENT_VERSION = "1.4.0";
 
       var routines = [
         {
@@ -649,6 +696,63 @@
         ]}
       };
 
+      var scorerDefinitions = {
+        "twelve-dart-targets": { kind: "entries", prompt: "Visit score", phases: [
+          { label: "20", count: 4, min: 0, max: 180, field: "score_20", combine: "sum" },
+          { label: "19", count: 4, min: 0, max: 171, field: "score_19", combine: "sum" },
+          { label: "18", count: 4, min: 0, max: 162, field: "score_18", combine: "sum" },
+          { label: "Bull", count: 4, min: 0, max: 150, field: "score_bull", combine: "sum" }
+        ]},
+        "straight-20-19": { kind: "entries", prompt: "Run marks", phases: [
+          { label: "20s", count: 5, min: 0, field: "best_20", combine: "max" },
+          { label: "19s", count: 5, min: 0, field: "best_19", combine: "max" }
+        ]},
+        "24-dart-high-score": { kind: "entries", prompt: "Visit score", phases: [
+          { label: "Round 1", count: 8, min: 0, max: 180, field: "round_1", combine: "sum" },
+          { label: "Round 2", count: 8, min: 0, max: 180, field: "round_2", combine: "sum" },
+          { label: "Round 3", count: 8, min: 0, max: 180, field: "round_3", combine: "sum" }
+        ]},
+        "cricket-scoring": { kind: "entries", prompt: "Marks this visit", totalField: "score", phases: [
+          { label: "15", count: 1, min: 0, max: 9 }, { label: "16", count: 1, min: 0, max: 9 },
+          { label: "17", count: 1, min: 0, max: 9 }, { label: "18", count: 1, min: 0, max: 9 },
+          { label: "19", count: 1, min: 0, max: 9 }, { label: "20", count: 1, min: 0, max: 9 },
+          { label: "Bull", count: 1, min: 0, max: 6 }
+        ]},
+        "round-board-hits": { kind: "entries", prompt: "Marks this visit", totalField: "score", phases: [
+          { label: "1", count: 1, min: 0, max: 9 }, { label: "18", count: 1, min: 0, max: 9 },
+          { label: "4", count: 1, min: 0, max: 9 }, { label: "13", count: 1, min: 0, max: 9 },
+          { label: "6", count: 1, min: 0, max: 9 }, { label: "10", count: 1, min: 0, max: 9 },
+          { label: "15", count: 1, min: 0, max: 9 }, { label: "2", count: 1, min: 0, max: 9 },
+          { label: "17", count: 1, min: 0, max: 9 }, { label: "3", count: 1, min: 0, max: 9 },
+          { label: "19", count: 1, min: 0, max: 9 }, { label: "7", count: 1, min: 0, max: 9 },
+          { label: "16", count: 1, min: 0, max: 9 }, { label: "8", count: 1, min: 0, max: 9 },
+          { label: "11", count: 1, min: 0, max: 9 }, { label: "14", count: 1, min: 0, max: 9 },
+          { label: "9", count: 1, min: 0, max: 9 }, { label: "12", count: 1, min: 0, max: 9 },
+          { label: "5", count: 1, min: 0, max: 9 }, { label: "20", count: 1, min: 0, max: 9 }
+        ]},
+        "one-at-double": { kind: "entries", prompt: "Hits this circuit", totalField: "hits", phases: [
+          { label: "Circuit 1", count: 1, min: 0, max: 21 },
+          { label: "Circuit 2", count: 1, min: 0, max: 21 },
+          { label: "Circuit 3", count: 1, min: 0, max: 21 }
+        ]},
+        "bobs-27": { kind: "bobs" },
+        "favourite-doubles": { kind: "entries", prompt: "Hits this visit", phases: [
+          { label: "D20", count: 4, min: 0, max: 3, field: "hits_d20", combine: "sum" },
+          { label: "D16", count: 4, min: 0, max: 3, field: "hits_d16", combine: "sum" },
+          { label: "D10", count: 4, min: 0, max: 3, field: "hits_d10", combine: "sum" },
+          { label: "D8", count: 4, min: 0, max: 3, field: "hits_d8", combine: "sum" }
+        ]},
+        "eight-of-32-40": { kind: "attempts", phases: [
+          { label: "Checkout 32", count: 8, field: "checkouts_32" },
+          { label: "Checkout 40", count: 8, field: "checkouts_40" }
+        ]},
+        "41-and-up": { kind: "ladder" },
+        "checkout-bounce": { kind: "bounce" },
+        "checkout-golf": { kind: "golf" },
+        "club-checkouts": { kind: "club" },
+        "killer-checkouts": { kind: "killer" }
+      };
+
       var selected = [];
       var results = [];
       var players = [];
@@ -660,6 +764,7 @@
       var elapsedBeforeStart = 0;
       var timerExpired = false;
       var resultsLoadToken = 0;
+      var scorerState = null;
 
       var library = document.getElementById("library");
       var scheduleList = document.getElementById("scheduleList");
@@ -674,6 +779,7 @@
       var nextButton = document.getElementById("nextButton");
       var timerBox = document.getElementById("timerBox");
       var timerDisplay = document.getElementById("timerDisplay");
+      var scorerBox = document.getElementById("scorerBox");
       var playerSelect = document.getElementById("playerSelect");
       var playerMessage = document.getElementById("playerMessage");
       var resultsView = document.getElementById("resultsView");
@@ -1072,7 +1178,7 @@
             routine = routines[i];
             if (routine.category === categories[c]) {
               html += '<div class="card-wrap"><article class="card' + (isSelected(routine.id) ? ' selected' : '') + '">';
-              html += '<div class="card-top"><span class="result-tag">' + (routine.timerMode ? 'Timer + result' : 'Score result') + '</span><span class="format-tag">' + routine.format + '</span></div>';
+              html += '<div class="card-top"><span class="result-tag">' + (scorerDefinitions[routine.id] ? 'Guided scorer' : (routine.timerMode ? 'Timer + result' : 'Score result')) + '</span><span class="format-tag">' + routine.format + '</span></div>';
               html += '<h3>' + routine.title + '</h3>';
               html += '<p>' + routine.description + '</p>';
               html += '<p class="card-outcome"><strong>Record:</strong> ' + routine.resultLabel + '</p>';
@@ -1133,6 +1239,362 @@
         }
       }
 
+      function saveScorerHistory() {
+        var history = scorerState.history;
+        var snapshot;
+        scorerState.history = [];
+        snapshot = JSON.stringify(scorerState);
+        scorerState.history = history;
+        history.push(snapshot);
+      }
+
+      function undoScorer() {
+        var history;
+        if (!scorerState || !scorerState.history.length) { return; }
+        history = scorerState.history;
+        scorerState = JSON.parse(history.pop());
+        scorerState.history = history;
+        syncScorerFields();
+        renderScorer();
+      }
+
+      function scorerUndoHtml() {
+        return scorerState.history.length ? '<button id="scorerUndo" class="scorer-undo" type="button">Undo</button>' : '';
+      }
+
+      function scorerActions(values, labels) {
+        var html = '<div class="scorer-actions">';
+        var i;
+        for (i = 0; i < values.length; i += 1) {
+          html += '<button type="button" data-score-choice="' + values[i] + '">' + labels[i] + '</button>';
+        }
+        return html + '</div>';
+      }
+
+      function phaseValue(phase, values) {
+        var value = phase.combine === "max" ? 0 : 0;
+        var i;
+        for (i = 0; i < values.length; i += 1) {
+          value = phase.combine === "max" ? Math.max(value, values[i]) : value + values[i];
+        }
+        return value;
+      }
+
+      function finishScorer(status, values) {
+        scorerState.done = true;
+        scorerState.status = status;
+        scorerState.values = values;
+        if (scorerState.routineId === "checkout-bounce") { pauseTimer(); }
+        syncScorerFields();
+        renderScorer();
+      }
+
+      function syncScorerFields() {
+        var statusElement = document.getElementById("resultStatus");
+        var key, input;
+        if (!scorerState || !scorerState.done) {
+          nextButton.disabled = !!scorerState;
+          return;
+        }
+        if (statusElement) { statusElement.value = scorerState.status; }
+        for (key in scorerState.values) {
+          if (scorerState.values.hasOwnProperty(key)) {
+            input = document.getElementById("field_" + key);
+            if (input) {
+              input.value = key === "time_seconds" ? formattedTime(scorerState.values[key] * 1000) : scorerState.values[key];
+            }
+          }
+        }
+        nextButton.disabled = false;
+      }
+
+      function completeEntryScorer() {
+        var definition = scorerState.definition;
+        var values = {};
+        var total = 0;
+        var i, value;
+        for (i = 0; i < definition.phases.length; i += 1) {
+          value = phaseValue(definition.phases[i], scorerState.phaseValues[i]);
+          total += value;
+          if (definition.phases[i].field) { values[definition.phases[i].field] = value; }
+        }
+        if (definition.totalField) { values[definition.totalField] = total; }
+        finishScorer("COMPLETE", values);
+      }
+
+      function submitScorerEntry() {
+        var input = document.getElementById("scorerInput");
+        var phase = scorerState.definition.phases[scorerState.phaseIndex];
+        var value = input ? Number(input.value) : NaN;
+        if (!isFinite(value) || Math.floor(value) !== value || value < phase.min || (phase.max !== undefined && value > phase.max)) {
+          resultError.innerHTML = "Enter a whole number" + (phase.max !== undefined ? " from " + phase.min + " to " + phase.max : " of " + phase.min + " or more") + ".";
+          if (input) { input.focus(); }
+          return;
+        }
+        resultError.innerHTML = "";
+        saveScorerHistory();
+        scorerState.phaseValues[scorerState.phaseIndex].push(value);
+        scorerState.entryIndex += 1;
+        if (scorerState.entryIndex >= phase.count) {
+          scorerState.phaseIndex += 1;
+          scorerState.entryIndex = 0;
+        }
+        if (scorerState.phaseIndex >= scorerState.definition.phases.length) { completeEntryScorer(); return; }
+        renderScorer();
+      }
+
+      function finishAttemptScorer() {
+        var values = {};
+        var i;
+        for (i = 0; i < scorerState.definition.phases.length; i += 1) {
+          values[scorerState.definition.phases[i].field] = scorerState.successes[i];
+        }
+        finishScorer("COMPLETE", values);
+      }
+
+      function scoreAttempt(made) {
+        var phase = scorerState.definition.phases[scorerState.phaseIndex];
+        saveScorerHistory();
+        if (made) { scorerState.successes[scorerState.phaseIndex] += 1; }
+        scorerState.attempt += 1;
+        if (scorerState.attempt > phase.count) {
+          scorerState.phaseIndex += 1;
+          scorerState.attempt = 1;
+        }
+        if (scorerState.phaseIndex >= scorerState.definition.phases.length) { finishAttemptScorer(); return; }
+        renderScorer();
+      }
+
+      function scoreBobs(hits) {
+        var targetValue = scorerState.target === 21 ? 50 : scorerState.target * 2;
+        var playedTarget = scorerState.target;
+        saveScorerHistory();
+        scorerState.score += hits ? hits * targetValue : -targetValue;
+        if (scorerState.score < 0) {
+          finishScorer("LOSS", { score: scorerState.score, progress_value: playedTarget });
+          return;
+        }
+        if (playedTarget === 21) {
+          finishScorer("COMPLETE", { score: scorerState.score, progress_value: 21 });
+          return;
+        }
+        scorerState.target += 1;
+        renderScorer();
+      }
+
+      function scoreLadder(made) {
+        saveScorerHistory();
+        if (made) {
+          scorerState.highest = scorerState.target;
+          if (scorerState.target === 60) {
+            finishScorer("COMPLETE", { progress_value: 60 });
+            return;
+          }
+          scorerState.target += 1;
+          scorerState.attempt = 1;
+        } else {
+          scorerState.attempt += 1;
+          if (scorerState.attempt > 5) {
+            finishScorer("LOSS", { progress_value: scorerState.highest });
+            return;
+          }
+        }
+        renderScorer();
+      }
+
+      function scoreBounce(made) {
+        saveScorerHistory();
+        if (made && scorerState.target === 120) {
+          finishScorer("WIN", { progress_value: 120, time_seconds: Math.round(currentElapsed() / 1000) });
+          return;
+        }
+        scorerState.target = made ? Math.min(120, scorerState.target + 2) : Math.max(80, scorerState.target - 3);
+        if (scorerState.target === 80) {
+          finishScorer("LOSS", { progress_value: 80, time_seconds: Math.round(currentElapsed() / 1000) });
+          return;
+        }
+        renderScorer();
+      }
+
+      function scoreGolf(darts) {
+        saveScorerHistory();
+        scorerState.total += darts;
+        scorerState.hole += 1;
+        if (scorerState.hole >= scorerState.holes.length) {
+          finishScorer("COMPLETE", { score: scorerState.total });
+          return;
+        }
+        renderScorer();
+      }
+
+      function scoreClub(points) {
+        saveScorerHistory();
+        scorerState.total += points;
+        scorerState.target += 1;
+        if (scorerState.target > 30) {
+          finishScorer("COMPLETE", { score: scorerState.total });
+          return;
+        }
+        renderScorer();
+      }
+
+      function scoreKiller(made) {
+        saveScorerHistory();
+        scorerState.rounds += 1;
+        scorerState.lives += made ? 1 : -1;
+        if (scorerState.lives >= 12) {
+          finishScorer("WIN", { final_lives: 12, rounds_played: scorerState.rounds });
+          return;
+        }
+        if (scorerState.lives <= 0) {
+          finishScorer("LOSS", { final_lives: 0, rounds_played: scorerState.rounds });
+          return;
+        }
+        renderScorer();
+      }
+
+      function handleScorerChoice(value) {
+        if (scorerState.kind === "attempts") { scoreAttempt(value === 1); }
+        else if (scorerState.kind === "bobs") { scoreBobs(value); }
+        else if (scorerState.kind === "ladder") { scoreLadder(value === 1); }
+        else if (scorerState.kind === "bounce") { scoreBounce(value === 1); }
+        else if (scorerState.kind === "golf") { scoreGolf(value); }
+        else if (scorerState.kind === "club") { scoreClub(value); }
+        else if (scorerState.kind === "killer") { scoreKiller(value === 1); }
+      }
+
+      function bindScorerControls() {
+        var buttons = scorerBox.getElementsByTagName("button");
+        var input = document.getElementById("scorerInput");
+        var i, value;
+        for (i = 0; i < buttons.length; i += 1) {
+          if (buttons[i].id === "scorerUndo") { buttons[i].onclick = undoScorer; }
+          else if (buttons[i].id === "scorerAdd") { buttons[i].onclick = submitScorerEntry; }
+          else if (buttons[i].getAttribute("data-score-choice") !== null) {
+            buttons[i].onclick = function () {
+              value = Number(this.getAttribute("data-score-choice"));
+              handleScorerChoice(value);
+            };
+          }
+        }
+        if (input) {
+          input.focus();
+          input.onkeydown = function (event) {
+            event = event || window.event;
+            if (event.keyCode === 13) { submitScorerEntry(); }
+          };
+        }
+      }
+
+      function renderScorer() {
+        var html = "";
+        var phase, values, current, targetName, display, hole;
+        if (!scorerState) { scorerBox.className = "scorer hidden"; return; }
+        scorerBox.className = scorerState.done ? "scorer done" : "scorer";
+        if (scorerState.done) {
+          display = displayResult(scorerState.routineId, scorerState.status, scorerState.values);
+          html = '<div class="scorer-head"><p class="scorer-target">Complete</p><span class="scorer-step">' + escapeHtml(display) + '</span></div>';
+          html += '<div class="scorer-foot">Result ready to save.' + scorerUndoHtml() + '</div>';
+          scorerBox.innerHTML = html;
+          bindScorerControls();
+          return;
+        }
+        if (scorerState.kind === "entries") {
+          phase = scorerState.definition.phases[scorerState.phaseIndex];
+          values = scorerState.phaseValues[scorerState.phaseIndex];
+          current = phaseValue(phase, values);
+          html += '<div class="scorer-head"><p class="scorer-target">' + escapeHtml(phase.label) + '</p><span class="scorer-step">' + (scorerState.entryIndex + 1) + ' of ' + phase.count + '</span></div>';
+          html += '<p class="scorer-score">' + (phase.combine === "max" ? "Best" : "Total") + ': <strong>' + current + '</strong></p>';
+          html += '<div class="scorer-entry"><input id="scorerInput" type="number" inputmode="numeric" step="1" min="' + phase.min + '"' + (phase.max !== undefined ? ' max="' + phase.max + '"' : '') + ' placeholder="' + escapeHtml(scorerState.definition.prompt) + '" aria-label="' + escapeHtml(scorerState.definition.prompt) + '"><button id="scorerAdd" type="button">Add</button></div>';
+          html += '<div class="scorer-foot">' + phase.min + (phase.max !== undefined ? '–' + phase.max : '+') + scorerUndoHtml() + '</div>';
+        } else if (scorerState.kind === "attempts") {
+          phase = scorerState.definition.phases[scorerState.phaseIndex];
+          html += '<div class="scorer-head"><p class="scorer-target">' + phase.label + '</p><span class="scorer-step">Attempt ' + scorerState.attempt + ' of ' + phase.count + '</span></div>';
+          html += '<p class="scorer-score">Made: <strong>' + scorerState.successes[scorerState.phaseIndex] + '</strong></p>';
+          html += scorerActions([1, 0], ["Made", "Missed"]);
+          html += '<div class="scorer-foot">' + scorerUndoHtml() + '</div>';
+        } else if (scorerState.kind === "bobs") {
+          targetName = scorerState.target === 21 ? "Bull" : "D" + scorerState.target;
+          html += '<div class="scorer-head"><p class="scorer-target">' + targetName + '</p><span class="scorer-step">Target ' + scorerState.target + ' of 21</span></div>';
+          html += '<p class="scorer-score">Running score: <strong>' + scorerState.score + '</strong></p>';
+          html += scorerActions([0, 1, 2, 3], ["0 hits", "1 hit", "2 hits", "3 hits"]);
+          html += '<div class="scorer-foot">' + scorerUndoHtml() + '</div>';
+        } else if (scorerState.kind === "ladder") {
+          html += '<div class="scorer-head"><p class="scorer-target">Checkout ' + scorerState.target + '</p><span class="scorer-step">Attempt ' + scorerState.attempt + ' of 5</span></div>';
+          html += '<p class="scorer-score">Completed through: <strong>' + scorerState.highest + '</strong></p>';
+          html += scorerActions([1, 0], ["Made", "Missed"]);
+          html += '<div class="scorer-foot">' + scorerUndoHtml() + '</div>';
+        } else if (scorerState.kind === "bounce") {
+          html += '<div class="scorer-head"><p class="scorer-target">Checkout ' + scorerState.target + '</p><span class="scorer-step">6 darts</span></div>';
+          html += '<p class="scorer-score">Made +2 · Missed −3</p>';
+          html += scorerActions([1, 0], ["Made", "Missed"]);
+          html += '<div class="scorer-foot">' + scorerUndoHtml() + '</div>';
+        } else if (scorerState.kind === "golf") {
+          hole = scorerState.holes[scorerState.hole];
+          html += '<div class="scorer-head"><p class="scorer-target">Checkout ' + hole.checkout + '</p><span class="scorer-step">Hole ' + (scorerState.hole + 1) + ' of 18 · Par ' + hole.par + '</span></div>';
+          html += '<p class="scorer-score">Running total: <strong>' + scorerState.total + '</strong></p>';
+          html += scorerActions([1, 2, 3, 4, 5, 6, 7], ["1", "2", "3", "4", "5", "6", "Fail"]);
+          html += '<div class="scorer-foot">Darts used' + scorerUndoHtml() + '</div>';
+        } else if (scorerState.kind === "club") {
+          html += '<div class="scorer-head"><p class="scorer-target">Checkout ' + scorerState.target + '</p><span class="scorer-step">' + (scorerState.target - 17) + ' of 13</span></div>';
+          html += '<p class="scorer-score">Points: <strong>' + scorerState.total + '</strong></p>';
+          html += scorerActions([3, 2, 1, 0], ["1–2 darts", "3–4", "5–6", "Failed"]);
+          html += '<div class="scorer-foot">' + scorerUndoHtml() + '</div>';
+        } else if (scorerState.kind === "killer") {
+          html += '<div class="scorer-head"><p class="scorer-target">Checkout 60</p><span class="scorer-step">Round ' + (scorerState.rounds + 1) + '</span></div>';
+          html += '<p class="scorer-score">Lives: <strong>' + scorerState.lives + '</strong></p>';
+          html += scorerActions([1, 0], ["Made", "Missed"]);
+          html += '<div class="scorer-foot">Reach 12 to win' + scorerUndoHtml() + '</div>';
+        }
+        scorerBox.innerHTML = html;
+        bindScorerControls();
+      }
+
+      function startScorer(routine) {
+        var definition = scorerDefinitions[routine.id];
+        var i;
+        scorerState = null;
+        scorerBox.className = "scorer hidden";
+        resultFields.className = "result-fields";
+        nextButton.disabled = false;
+        if (!definition) { return; }
+        scorerState = { routineId: routine.id, kind: definition.kind, definition: definition, history: [], done: false, status: "COMPLETE", values: {} };
+        resultFields.className = "result-fields hidden";
+        nextButton.disabled = true;
+        if (definition.kind === "entries") {
+          scorerState.phaseIndex = 0;
+          scorerState.entryIndex = 0;
+          scorerState.phaseValues = [];
+          for (i = 0; i < definition.phases.length; i += 1) { scorerState.phaseValues.push([]); }
+        } else if (definition.kind === "attempts") {
+          scorerState.phaseIndex = 0;
+          scorerState.attempt = 1;
+          scorerState.successes = [];
+          for (i = 0; i < definition.phases.length; i += 1) { scorerState.successes.push(0); }
+        } else if (definition.kind === "bobs") {
+          scorerState.target = 1; scorerState.score = 27;
+        } else if (definition.kind === "ladder") {
+          scorerState.target = 41; scorerState.attempt = 1; scorerState.highest = 40;
+        } else if (definition.kind === "bounce") {
+          scorerState.target = 100;
+        } else if (definition.kind === "golf") {
+          scorerState.hole = 0; scorerState.total = 0;
+          scorerState.holes = [
+            { checkout: 40, par: 3 }, { checkout: 120, par: 5 }, { checkout: 10, par: 3 },
+            { checkout: 80, par: 4 }, { checkout: 95, par: 4 }, { checkout: 36, par: 3 },
+            { checkout: 125, par: 5 }, { checkout: 87, par: 4 }, { checkout: 20, par: 3 },
+            { checkout: 65, par: 4 }, { checkout: 120, par: 4 }, { checkout: 101, par: 4 },
+            { checkout: 170, par: 6 }, { checkout: 130, par: 5 }, { checkout: 19, par: 3 },
+            { checkout: 72, par: 4 }, { checkout: 88, par: 4 }, { checkout: 76, par: 4 }
+          ];
+        } else if (definition.kind === "club") {
+          scorerState.target = 18; scorerState.total = 0;
+        } else if (definition.kind === "killer") {
+          scorerState.lives = 5; scorerState.rounds = 0;
+        }
+        renderScorer();
+      }
+
       function startSchedule() {
         if (!selected.length || !selectedPlayer) {
           playerMessage.innerHTML = "Choose who is training before pressing Play.";
@@ -1167,6 +1629,7 @@
         document.getElementById("playFinish").innerHTML = routine.finish;
         document.getElementById("playOutcome").innerHTML = routine.outcome;
         renderResultFields(routine);
+        startScorer(routine);
         resultError.innerHTML = "";
         timerBox.className = routine.timerMode ? "timer-box" : "timer-box hidden";
         document.getElementById("timerStart").innerHTML = routine.timerMode === "countdown" ? "Start countdown" : "Start stopwatch";
@@ -1238,7 +1701,11 @@
             timerDisplay.innerHTML = "00:00";
             if (document.getElementById("resultStatus")) { document.getElementById("resultStatus").value = "TIMEOUT"; }
             if (document.getElementById("field_time_seconds")) { document.getElementById("field_time_seconds").value = "20:00"; }
-            resultError.innerHTML = routine.timeoutMessage;
+            if (scorerState && scorerState.routineId === "checkout-bounce" && !scorerState.done) {
+              saveScorerHistory();
+              finishScorer("TIMEOUT", { progress_value: scorerState.target, time_seconds: routine.limitSeconds });
+            }
+            resultError.innerHTML = scorerState && scorerState.routineId === "checkout-bounce" ? "Time is up. Your final checkout has been recorded." : routine.timeoutMessage;
             return;
           }
           timerDisplay.innerHTML = formattedTime(remaining + 999);
