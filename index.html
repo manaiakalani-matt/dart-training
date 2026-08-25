@@ -87,6 +87,22 @@
       font-size: 19px;
     }
     .player-message { min-height: 22px; margin: 7px 0 0; color: #6a4a2f; font-size: 14px; }
+    .preset-section { margin: 26px 0 5px; }
+    .preset-section h2 { margin: 0 0 12px; font-size: 24px; }
+    .preset-strip { display: flex; gap: 9px; overflow-x: auto; padding: 0 0 8px; -webkit-overflow-scrolling: touch; }
+    .preset-button {
+      flex: 1 0 176px;
+      min-height: 102px;
+      padding: 13px;
+      border: 1px solid #b9b2a5;
+      border-radius: 10px;
+      background: #fffdf8;
+      color: #17352d;
+      text-align: left;
+    }
+    .preset-name { display: block; font-weight: bold; }
+    .preset-routines { display: block; margin-top: 5px; color: #66706c; font-size: 12px; line-height: 1.3; }
+    .preset-start { display: block; margin-top: 8px; color: #9a5a2c; font-size: 13px; font-style: normal; font-weight: bold; }
     .library { padding-bottom: 30px; }
     .category { padding-top: 28px; }
     .category-head { border-bottom: 2px solid #cfc7b8; margin-bottom: 16px; }
@@ -308,6 +324,11 @@
           </select>
           <p id="playerMessage" class="player-message">Connecting to the training log…</p>
         </div>
+        <section class="preset-section" aria-labelledby="presetTitle">
+          <p class="eyebrow">Quick start</p>
+          <h2 id="presetTitle">Ready-made sessions</h2>
+          <div id="presetList" class="preset-strip"></div>
+        </section>
         <nav class="category-nav" aria-label="Routine categories">
           <a href="#scoring">Scoring</a>
           <a href="#doubles">Doubles</a>
@@ -408,7 +429,7 @@
       var API_URL = "https://script.google.com/macros/s/AKfycbz5nJ3_BP8kQt4Cjhwjn3FzGtonRsTsYLz_xjLbUG6UbG2p3lxMat4MDujeTypk0C6KHw/exec";
       var RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Zi0OHmTvxZOpkgBy7TcrKQW8lu7QQjtIOhxV65Icl2g/gviz/tq?tqx=out:csv&gid=990006";
       var RESULTS_ONLY_PLAYER_ID = "646";
-      var CLIENT_VERSION = "1.4.0";
+      var CLIENT_VERSION = "1.5.0";
 
       var routines = [
         {
@@ -753,6 +774,39 @@
         "killer-checkouts": { kind: "killer" }
       };
 
+      var presetDefinitions = [
+        {
+          id: "quick-session",
+          title: "Quick Session",
+          summary: "Cricket · Favourite Doubles · 8 of 32 & 40",
+          routineIds: ["cricket-scoring", "favourite-doubles", "eight-of-32-40"]
+        },
+        {
+          id: "scoring-practice",
+          title: "Scoring Practice",
+          summary: "12-Dart Targets · Straight 20s & 19s · 24-Dart High Score",
+          routineIds: ["twelve-dart-targets", "straight-20-19", "24-dart-high-score"]
+        },
+        {
+          id: "doubles-practice",
+          title: "Doubles Practice",
+          summary: "One at the Double · Favourite Doubles · Bob's 27",
+          routineIds: ["one-at-double", "favourite-doubles", "bobs-27"]
+        },
+        {
+          id: "checkout-practice",
+          title: "Checkout Practice",
+          summary: "Club Checkouts · 41 and Up · Checkout Bounce",
+          routineIds: ["club-checkouts", "41-and-up", "checkout-bounce"]
+        },
+        {
+          id: "match-ready",
+          title: "Match Ready",
+          summary: "24-Dart High Score · Favourite Doubles · Checkout Golf",
+          routineIds: ["24-dart-high-score", "favourite-doubles", "checkout-golf"]
+        }
+      ];
+
       var selected = [];
       var results = [];
       var players = [];
@@ -767,6 +821,7 @@
       var scorerState = null;
 
       var library = document.getElementById("library");
+      var presetList = document.getElementById("presetList");
       var scheduleList = document.getElementById("scheduleList");
       var emptySchedule = document.getElementById("emptySchedule");
       var playButton = document.getElementById("playButton");
@@ -1161,6 +1216,41 @@
 
       function isSelected(id) {
         return selected.indexOf(id) !== -1;
+      }
+
+      function startPreset(id) {
+        var i;
+        var preset = null;
+        for (i = 0; i < presetDefinitions.length; i += 1) {
+          if (presetDefinitions[i].id === id) { preset = presetDefinitions[i]; break; }
+        }
+        if (!preset) { return; }
+        selected = preset.routineIds.slice(0);
+        renderLibrary();
+        renderSchedule();
+        if (selectedPlayer) {
+          startSchedule();
+        } else {
+          playerMessage.innerHTML = "Choose who is training, then press Play schedule.";
+          if (!playerSelect.disabled) { playerSelect.focus(); }
+        }
+      }
+
+      function renderPresets() {
+        var html = "";
+        var i;
+        var buttons;
+        for (i = 0; i < presetDefinitions.length; i += 1) {
+          html += '<button class="preset-button" type="button" data-preset="' + presetDefinitions[i].id + '">';
+          html += '<span class="preset-name">' + escapeHtml(presetDefinitions[i].title) + '</span>';
+          html += '<span class="preset-routines">' + escapeHtml(presetDefinitions[i].summary) + '</span>';
+          html += '<em class="preset-start">Start →</em></button>';
+        }
+        presetList.innerHTML = html;
+        buttons = presetList.getElementsByTagName("button");
+        for (i = 0; i < buttons.length; i += 1) {
+          buttons[i].onclick = function () { startPreset(this.getAttribute("data-preset")); };
+        }
       }
 
       function renderLibrary() {
@@ -1939,6 +2029,7 @@
         if (event.keyCode === 13) { saveAndContinue(); }
       };
 
+      renderPresets();
       renderLibrary();
       renderSchedule();
       renderResults([]);
