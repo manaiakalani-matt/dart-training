@@ -591,7 +591,7 @@
       var API_URL = "https://script.google.com/macros/s/AKfycbz5nJ3_BP8kQt4Cjhwjn3FzGtonRsTsYLz_xjLbUG6UbG2p3lxMat4MDujeTypk0C6KHw/exec";
       var RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Zi0OHmTvxZOpkgBy7TcrKQW8lu7QQjtIOhxV65Icl2g/gviz/tq?tqx=out:csv&gid=990006";
       var RESULTS_ONLY_PLAYER_ID = "646";
-      var CLIENT_VERSION = "1.6.0";
+      var CLIENT_VERSION = "1.6.1";
 
       var routines = [
         {
@@ -1390,12 +1390,7 @@
         selected = preset.routineIds.slice(0);
         renderLibrary();
         renderSchedule();
-        if (selectedPlayer) {
-          startSchedule();
-        } else {
-          playerMessage.innerHTML = "Choose who is training, then press Play schedule.";
-          if (!playerSelect.disabled) { playerSelect.focus(); }
-        }
+        playerMessage.innerHTML = escapeHtml(preset.title) + " loaded. Add or remove routines, then play when ready.";
       }
 
       function renderPresets() {
@@ -1406,7 +1401,7 @@
           html += '<button class="preset-button" type="button" data-preset="' + presetDefinitions[i].id + '">';
           html += '<span class="preset-name">' + escapeHtml(presetDefinitions[i].title) + '</span>';
           html += '<span class="preset-routines">' + escapeHtml(presetDefinitions[i].summary) + '</span>';
-          html += '<em class="preset-start">Start →</em></button>';
+          html += '<em class="preset-start">Load schedule →</em></button>';
         }
         presetList.innerHTML = html;
         buttons = presetList.getElementsByTagName("button");
