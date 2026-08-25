@@ -1,10 +1,10 @@
 {
-  "name": "Oche Darts Training",
-  "short_name": "Oche",
+  "name": "Darty Practice",
+  "short_name": "Darty Practice",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f3efe6",
-  "theme_color": "#17352d",
+  "background_color": "#090909",
+  "theme_color": "#ff8a3d",
   "icons": [
     {
       "src": "icon-192.png",
