@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "darty-practice-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-31",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "darty-practice",
+      "database_id": "7de0e20b-92be-42d0-86de-55e283f87b19",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

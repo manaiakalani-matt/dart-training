@@ -588,8 +588,7 @@
     (function () {
       "use strict";
 
-      var API_URL = "https://script.google.com/macros/s/AKfycbz5nJ3_BP8kQt4Cjhwjn3FzGtonRsTsYLz_xjLbUG6UbG2p3lxMat4MDujeTypk0C6KHw/exec";
-      var RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Zi0OHmTvxZOpkgBy7TcrKQW8lu7QQjtIOhxV65Icl2g/gviz/tq?tqx=out:csv&gid=990006";
+      var API_URL = "https://darty-practice-api.mattsdarts.workers.dev";
       var RESULTS_ONLY_PLAYER_ID = "646";
       var CLIENT_VERSION = "1.6.1";
 
@@ -1070,29 +1069,6 @@
         request.send(body ? JSON.stringify(body) : null);
       }
 
-      function requestText(url, callback) {
-        if (window.fetch) {
-          window.fetch(url, { cache: "no-store" }).then(function (response) {
-            if (!response.ok) { throw new Error("Results could not be loaded. Please check the internet and try again."); }
-            return response.text();
-          }).then(function (data) { callback(null, data); })
-            .catch(function (error) { callback(error); });
-          return;
-        }
-        var request = new XMLHttpRequest();
-        request.open("GET", url, true);
-        request.onreadystatechange = function () {
-          if (request.readyState !== 4) { return; }
-          if (request.status < 200 || request.status >= 300) {
-            callback(new Error("Results could not be loaded. Please check the internet and try again."));
-            return;
-          }
-          callback(null, request.responseText);
-        };
-        request.onerror = function () { callback(new Error("Results could not be loaded. Please check the internet and try again.")); };
-        request.send(null);
-      }
-
       function loadPlayers() {
         requestJson("GET", API_URL + "?action=players", null, function (error, data) {
           var trainingHtml = '<option value="">Choose your name</option>';
@@ -1167,61 +1143,6 @@
           resultsMessage.innerHTML = "Choose a player to see their training history.";
           renderResults([]);
         }
-      }
-
-      function parseCsv(text) {
-        var rows = [];
-        var row = [];
-        var field = "";
-        var quoted = false;
-        var i, character;
-        for (i = 0; i < text.length; i += 1) {
-          character = text.charAt(i);
-          if (quoted) {
-            if (character === '"' && text.charAt(i + 1) === '"') {
-              field += '"';
-              i += 1;
-            } else if (character === '"') {
-              quoted = false;
-            } else {
-              field += character;
-            }
-          } else if (character === '"') {
-            quoted = true;
-          } else if (character === ",") {
-            row.push(field);
-            field = "";
-          } else if (character === "\n") {
-            row.push(field.replace(/\r$/, ""));
-            rows.push(row);
-            row = [];
-            field = "";
-          } else {
-            field += character;
-          }
-        }
-        if (field !== "" || row.length) {
-          row.push(field.replace(/\r$/, ""));
-          rows.push(row);
-        }
-        return rows;
-      }
-
-      function resultRowsFromCsv(text) {
-        var rows = parseCsv(text);
-        var headers = rows.length ? rows[0] : [];
-        var resultsData = [];
-        var i, j, item;
-        for (i = 1; i < rows.length; i += 1) {
-          if (!rows[i].length || !rows[i][0]) { continue; }
-          item = {};
-          for (j = 0; j < headers.length; j += 1) { item[headers[j]] = rows[i][j] || ""; }
-          resultsData.push(item);
-        }
-        resultsData.sort(function (a, b) {
-          return String(a.Submitted_At_UTC || a.Training_Date).localeCompare(String(b.Submitted_At_UTC || b.Training_Date));
-        });
-        return resultsData;
       }
 
       function numeric(value, fallback) {
@@ -1332,13 +1253,12 @@
       }
 
       function loadResults(playerId) {
-        var query = "select * where F = " + Number(playerId);
         var loadToken = resultsLoadToken + 1;
         var playerName = selectedPlayer ? selectedPlayer.displayName : "this player";
         resultsLoadToken = loadToken;
         resultsMessage.innerHTML = "Loading results…";
         resultsList.innerHTML = '<p class="empty">Loading routines…</p>';
-        requestText(RESULTS_CSV_URL + "&tq=" + encodeURIComponent(query), function (error, text) {
+        requestJson("GET", API_URL + "?action=results&playerId=" + encodeURIComponent(playerId), null, function (error, response) {
           var data;
           if (loadToken !== resultsLoadToken) { return; }
           if (error) {
@@ -1346,7 +1266,7 @@
             resultsList.innerHTML = '<p class="empty">Results are unavailable right now.</p>';
             return;
           }
-          data = resultRowsFromCsv(text);
+          data = response.results || [];
           resultsMessage.innerHTML = data.length + " saved result" + (data.length === 1 ? "" : "s") + " for " + escapeHtml(playerName) + ".";
           renderResults(data);
         });
