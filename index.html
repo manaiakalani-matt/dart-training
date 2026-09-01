@@ -574,12 +574,11 @@
 
       <section id="summaryPanel" class="routine-panel hidden">
         <p class="eyebrow">Session complete</p>
-        <h1>Ready to save.</h1>
-        <p id="summaryCopy">Check the results below, then save this session to the training log.</p>
+        <h1>Session saved.</h1>
+        <p id="summaryCopy">Every routine below is safely stored in the training log.</p>
         <ul id="summaryList" class="summary-list"></ul>
-        <button id="saveTrainingButton" class="next-button" type="button">Save training</button>
         <p id="saveMessage" class="save-message" role="status"></p>
-        <button id="finishButton" class="next-button hidden" type="button">Back to routines</button>
+        <button id="finishButton" class="next-button" type="button">Back to routines</button>
       </section>
     </div>
   </div>
@@ -590,7 +589,8 @@
 
       var API_URL = "https://darty-practice-api.mattsdarts.workers.dev";
       var RESULTS_ONLY_PLAYER_ID = "646";
-      var CLIENT_VERSION = "1.6.1";
+      var CLIENT_VERSION = "1.7.0";
+      var PENDING_SAVES_KEY = "dartyPracticePendingSavesV1";
 
       var routines = [
         {
@@ -980,6 +980,8 @@
       var timerExpired = false;
       var resultsLoadToken = 0;
       var scorerState = null;
+      var pendingAttempt = null;
+      var saveInProgress = false;
 
       var library = document.getElementById("library");
       var presetList = document.getElementById("presetList");
@@ -1002,7 +1004,6 @@
       var resultsPlayerSelect = document.getElementById("resultsPlayerSelect");
       var resultsMessage = document.getElementById("resultsMessage");
       var resultsList = document.getElementById("resultsList");
-      var saveTrainingButton = document.getElementById("saveTrainingButton");
       var saveMessage = document.getElementById("saveMessage");
 
       function findRoutine(id) {
@@ -1029,6 +1030,62 @@
           try { window.localStorage.setItem("ocheTrainingDeviceId", id); } catch (ignoreAgain) {}
         }
         return id;
+      }
+
+      function readPendingSaves() {
+        var stored;
+        try {
+          stored = JSON.parse(window.localStorage.getItem(PENDING_SAVES_KEY) || "[]");
+          return Object.prototype.toString.call(stored) === "[object Array]" ? stored : [];
+        } catch (ignore) { return []; }
+      }
+
+      function writePendingSaves(items) {
+        try { window.localStorage.setItem(PENDING_SAVES_KEY, JSON.stringify(items)); } catch (ignore) {}
+      }
+
+      function queuePendingSave(payload) {
+        var items = readPendingSaves();
+        var attemptId = payload.attempts[0].attemptId;
+        var i;
+        for (i = 0; i < items.length; i += 1) {
+          if (items[i].attempts && items[i].attempts[0] && items[i].attempts[0].attemptId === attemptId) { return; }
+        }
+        items.push(payload);
+        writePendingSaves(items);
+      }
+
+      function removePendingSave(attemptId) {
+        var items = readPendingSaves();
+        var remaining = [];
+        var i;
+        for (i = 0; i < items.length; i += 1) {
+          if (!items[i].attempts || !items[i].attempts[0] || items[i].attempts[0].attemptId !== attemptId) {
+            remaining.push(items[i]);
+          }
+        }
+        writePendingSaves(remaining);
+      }
+
+      function responseAcceptedAttempt(data, attemptId) {
+        var accepted = data.accepted || [];
+        var duplicates = data.duplicates || [];
+        return accepted.indexOf(attemptId) !== -1 || duplicates.indexOf(attemptId) !== -1 || data.saved === 1;
+      }
+
+      function flushPendingSaves() {
+        var items = readPendingSaves();
+        var payload;
+        var attemptId;
+        if (!items.length) { return; }
+        payload = items[0];
+        if (!payload.attempts || !payload.attempts[0]) { writePendingSaves(items.slice(1)); flushPendingSaves(); return; }
+        attemptId = payload.attempts[0].attemptId;
+        requestJson("POST", API_URL, payload, function (error, data) {
+          if (error || !responseAcceptedAttempt(data, attemptId)) { return; }
+          removePendingSave(attemptId);
+          flushPendingSaves();
+        });
       }
 
       function requestJson(method, url, body, callback) {
@@ -1769,6 +1826,8 @@
           return;
         }
         results = [];
+        pendingAttempt = null;
+        saveInProgress = false;
         sessionId = makeId("session");
         currentIndex = 0;
         builderView.className = "hidden";
@@ -1914,26 +1973,59 @@
 
       function saveAndContinue() {
         var routine = findRoutine(selected[currentIndex]);
+        var payload;
+        var attemptId;
+        if (saveInProgress) { return; }
         pauseTimer();
-        var collected = collectResult(routine);
-        if (!collected) { return; }
-        results.push({
-          attemptId: makeId("attempt"),
-          routineId: routine.id,
-          title: routine.title,
-          status: collected.status,
-          values: collected.values,
-          resultDisplay: collected.display,
-          notes: ""
-        });
-        currentIndex += 1;
-
-        if (currentIndex < selected.length) {
-          showRoutine();
-          window.scrollTo(0, 0);
-        } else {
-          showSummary();
+        if (!pendingAttempt) {
+          var collected = collectResult(routine);
+          if (!collected) { return; }
+          pendingAttempt = {
+            attemptId: makeId("attempt"),
+            routineId: routine.id,
+            title: routine.title,
+            status: collected.status,
+            values: collected.values,
+            resultDisplay: collected.display,
+            notes: ""
+          };
         }
+        attemptId = pendingAttempt.attemptId;
+        payload = {
+          action: "saveSession",
+          sessionId: sessionId,
+          playerId: selectedPlayer.playerId,
+          trainingDate: localDate(),
+          timeZone: "Pacific/Auckland",
+          deviceId: getDeviceId(),
+          clientVersion: CLIENT_VERSION,
+          attempts: [pendingAttempt]
+        };
+        queuePendingSave(payload);
+        saveInProgress = true;
+        nextButton.disabled = true;
+        nextButton.innerHTML = "Saving result…";
+        resultError.innerHTML = "Saving this routine to the training log…";
+        requestJson("POST", API_URL, payload, function (error, data) {
+          if (error || !responseAcceptedAttempt(data, attemptId)) {
+            saveInProgress = false;
+            nextButton.disabled = false;
+            nextButton.innerHTML = "Try saving result again";
+            resultError.innerHTML = escapeHtml(error ? error.message : "The training log did not confirm this result.") + " A recovery copy is saved on this device.";
+            return;
+          }
+          removePendingSave(attemptId);
+          results.push(pendingAttempt);
+          pendingAttempt = null;
+          saveInProgress = false;
+          currentIndex += 1;
+          if (currentIndex < selected.length) {
+            showRoutine();
+            window.scrollTo(0, 0);
+          } else {
+            showSummary();
+          }
+        });
       }
 
       function parseTime(value) {
@@ -2037,11 +2129,9 @@
         routinePanel.className = "routine-panel hidden";
         summaryPanel.className = "routine-panel";
         document.getElementById("progress").innerHTML = "Complete";
-        saveTrainingButton.className = "next-button";
-        saveTrainingButton.disabled = false;
-        document.getElementById("finishButton").className = "next-button hidden";
-        saveMessage.className = "save-message";
-        saveMessage.innerHTML = "";
+        document.getElementById("finishButton").className = "next-button";
+        saveMessage.className = "save-message good";
+        saveMessage.innerHTML = results.length + " routine result" + (results.length === 1 ? "" : "s") + " saved for " + escapeHtml(selectedPlayer.displayName) + ".";
         window.scrollTo(0, 0);
       }
 
@@ -2050,38 +2140,11 @@
         return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
       }
 
-      function saveTraining() {
-        var body = {
-          action: "saveSession",
-          sessionId: sessionId,
-          playerId: selectedPlayer.playerId,
-          trainingDate: localDate(),
-          timeZone: "Pacific/Auckland",
-          deviceId: getDeviceId(),
-          clientVersion: CLIENT_VERSION,
-          attempts: results
-        };
-        saveTrainingButton.disabled = true;
-        saveTrainingButton.innerHTML = "Saving…";
-        saveMessage.className = "save-message";
-        saveMessage.innerHTML = "Connecting to the training log…";
-        requestJson("POST", API_URL, body, function (error, data) {
-          if (error) {
-            saveTrainingButton.disabled = false;
-            saveTrainingButton.innerHTML = "Try saving again";
-            saveMessage.className = "save-message bad";
-            saveMessage.innerHTML = escapeHtml(error.message) + " Your results are still on this screen.";
-            return;
-          }
-          saveTrainingButton.className = "next-button hidden";
-          saveMessage.className = "save-message good";
-          saveMessage.innerHTML = data.saved + " routine result" + (data.saved === 1 ? "" : "s") + " saved for " + escapeHtml(selectedPlayer.displayName) + ".";
-          document.getElementById("summaryCopy").innerHTML = "Training saved successfully.";
-          document.getElementById("finishButton").className = "next-button";
-        });
-      }
-
       function returnToBuilder() {
+        if (saveInProgress) {
+          resultError.innerHTML = "Please wait while this routine is saved.";
+          return;
+        }
         stopTimer();
         playView.className = "play-screen hidden";
         resultsView.className = "hidden";
@@ -2100,7 +2163,6 @@
       document.getElementById("timerPause").onclick = pauseTimer;
       document.getElementById("timerReset").onclick = resetTimer;
       nextButton.onclick = saveAndContinue;
-      saveTrainingButton.onclick = saveTraining;
       resultFields.onkeydown = function (event) {
         event = event || window.event;
         if (event.keyCode === 13) { saveAndContinue(); }
@@ -2111,6 +2173,7 @@
       renderSchedule();
       renderResults([]);
       loadPlayers();
+      flushPendingSaves();
     }());
   </script>
 </body>

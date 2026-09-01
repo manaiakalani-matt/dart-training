@@ -255,8 +255,11 @@ async function saveSession(body: SaveSessionBody, env: Env): Promise<Response> {
 
   const placeholders = prepared.map(() => "?").join(",");
   const existingResult = await env.DB.prepare(
-    `SELECT attempt_id AS attemptId FROM training_log WHERE attempt_id IN (${placeholders})`,
-  ).bind(...prepared.map((item) => item.attemptId)).all<{ attemptId: string }>();
+    `SELECT attempt_id AS attemptId, session_id AS sessionId, player_id AS playerId
+     FROM training_log WHERE attempt_id IN (${placeholders})`,
+  ).bind(...prepared.map((item) => item.attemptId)).all<{ attemptId: string; sessionId: string; playerId: string }>();
+  const conflicting = existingResult.results.find((row) => row.sessionId !== sessionId || row.playerId !== playerId);
+  if (conflicting) throw new Error("An Attempt ID is already attached to another training session.");
   const existing = new Set(existingResult.results.map((row) => row.attemptId));
   const pending = prepared.filter((item) => !existing.has(item.attemptId));
   const submittedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -282,10 +285,16 @@ async function saveSession(body: SaveSessionBody, env: Env): Promise<Response> {
     saved = results.reduce((total, result) => total + Number(result.meta.changes || 0), 0);
   }
 
+  const acceptedResult = await env.DB.prepare(
+    `SELECT attempt_id AS attemptId FROM training_log
+     WHERE session_id = ? AND player_id = ? AND attempt_id IN (${placeholders})`,
+  ).bind(sessionId, playerId, ...prepared.map((item) => item.attemptId)).all<{ attemptId: string }>();
+
   return json({
     ok: true,
     sessionId,
     saved,
+    accepted: acceptedResult.results.map((row) => row.attemptId),
     duplicates: prepared.filter((item) => existing.has(item.attemptId)).map((item) => item.attemptId),
   });
 }
