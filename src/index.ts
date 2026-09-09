@@ -1,3 +1,5 @@
+import { replayLeg, legDisplay } from "../shared/x01.js";
+
 type InputDefinition = {
   key: string;
   label: string;
@@ -172,6 +174,30 @@ async function handleGet(url: URL, env: Env): Promise<Response> {
     return json({ ok: true, routines });
   }
 
+  if (action === "legs") {
+    const playerId = cleanText(url.searchParams.get("playerId"));
+    if (!/^\d{1,20}$/.test(playerId)) throw new Error("A valid Player ID is required.");
+    let beforeDate = "9999", beforeId = "";
+    const cursor = url.searchParams.get("before");
+    if (cursor) {
+      const parsed: unknown = JSON.parse(cursor);
+      if (!isObject(parsed) || typeof parsed.date !== "string" || !/^\d{4}-\d{2}-\d{2}T[0-9:]+Z$/.test(parsed.date) || !cleanId(parsed.id)) throw new Error("Invalid history cursor.");
+      beforeDate = parsed.date; beforeId = cleanId(parsed.id);
+    }
+    const response = await env.DB.prepare(`
+      SELECT attempt_id AS "Attempt_ID", submitted_at_utc AS "Submitted_At_UTC",
+        training_date AS "Training_Date", routine_id AS "Routine_ID", status AS "Status",
+        detail_1 AS "Detail_1", detail_2 AS "Detail_2", detail_3 AS "Detail_3", detail_4 AS "Detail_4",
+        result_display AS "Result_Display", progress_value AS "Progress_Value"
+      FROM training_log WHERE player_id = ? AND routine_id = 'solo-x01'
+        AND (submitted_at_utc < ? OR (submitted_at_utc = ? AND attempt_id < ?))
+      ORDER BY submitted_at_utc DESC, attempt_id DESC LIMIT 101
+    `).bind(playerId, beforeDate, beforeDate, beforeId).all<{ Attempt_ID: string; Submitted_At_UTC: string }>();
+    const legs = response.results.slice(0, 100);
+    const last = legs[legs.length - 1];
+    return json({ ok: true, legs, next: response.results.length > 100 ? JSON.stringify({ date: last.Submitted_At_UTC, id: last.Attempt_ID }) : null });
+  }
+
   if (action === "results") {
     const playerId = cleanText(url.searchParams.get("playerId"));
     if (!/^\d{1,20}$/.test(playerId)) {
@@ -302,6 +328,19 @@ async function saveSession(body: SaveSessionBody, env: Env): Promise<Response> {
 function prepareAttempt(attempt: AttemptInput): PreparedAttempt {
   const attemptId = cleanId(attempt.attemptId);
   const routineId = cleanId(attempt.routineId);
+  if (routineId === "solo-x01") {
+    if (!attemptId) throw new Error("Every result requires an Attempt ID.");
+    const values = isObject(attempt.values) ? attempt.values : {};
+    const leg = replayLeg(values.start, values.doubleIn, values.limit, values.visits);
+    if (leg.status === "PLAYING" || attempt.status !== leg.status) throw new Error("Only checked-out or dart-limit legs can be saved.");
+    return {
+      attemptId, routineId, version: 1, category: "01 Legs", status: leg.status,
+      details: [leg.start, leg.doubleIn ? 1 : 0, leg.limit, leg.darts],
+      score: leg.darts, hits: null, possible: null, timeSeconds: null,
+      progressValue: leg.remaining, roundsPlayed: leg.visits.length,
+      display: legDisplay(leg), resultDisplay: legDisplay(leg), notes: "",
+    };
+  }
   const definition = ROUTINES[routineId];
   const status = cleanText(attempt.status).toUpperCase();
   const values = isObject(attempt.values) ? attempt.values : {};

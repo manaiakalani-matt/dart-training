@@ -454,6 +454,7 @@
       .trend-badge { display: inline-block; margin-top: 8px; }
     }
   </style>
+  <link rel="stylesheet" href="solo.css">
 </head>
 <body>
   <div id="builderView">
@@ -483,6 +484,17 @@
           </select>
           <p id="playerMessage" class="player-message">Connecting to the training log…</p>
         </div>
+        <section class="preset-section" aria-labelledby="soloTitle">
+          <p class="eyebrow">Solo practice</p><h2 id="soloTitle">01 simulator</h2>
+          <p>Your own leg. Always double out.</p>
+          <div class="solo-settings">
+            <label>Starting score<select id="soloStart"><option>170</option><option>201</option><option>301</option><option selected>501</option><option>701</option></select></label>
+            <label>Entry rule<select id="soloEntry"><option value="straight">Straight in</option><option value="double">Double in</option></select></label>
+            <label>Dart limit (optional)<input id="soloLimit" type="number" min="1" step="1" placeholder="Unlimited"></label>
+          </div>
+          <button id="startSoloButton" class="next-button" type="button">Play 01</button>
+          <p id="soloSetupError" class="error" role="alert"></p>
+        </section>
         <section class="preset-section" aria-labelledby="presetTitle">
           <p class="eyebrow">Quick start</p>
           <h2 id="presetTitle">Ready-made sessions</h2>
@@ -534,6 +546,10 @@
           <p id="resultsMessage" class="player-message">Connecting to the training log…</p>
         </div>
       </section>
+      <section class="result-card"><h2>01 legs</h2><p>Checked-out legs and dart-limit attempts, newest first.</p>
+        <button id="seeLegsButton" class="view-tab" type="button" aria-expanded="false" aria-controls="legHistory">See legs</button>
+        <div id="legHistory" class="leg-history hidden"></div>
+      </section>
       <div id="resultsList" class="results-list"></div>
     </main>
   </div>
@@ -583,13 +599,15 @@
     </div>
   </div>
 
-  <script>
+  <div id="soloView" class="hidden"></div>
+  <script type="module">
+    import { createLeg, submitVisit, replayLeg, canCheckout, visitDarts, legDisplay } from "./shared/x01.js";
     (function () {
       "use strict";
 
       var API_URL = "https://darty-practice-api.mattsdarts.workers.dev";
       var RESULTS_ONLY_PLAYER_ID = "646";
-      var CLIENT_VERSION = "1.7.0";
+      var CLIENT_VERSION = "1.8.0";
       var PENDING_SAVES_KEY = "dartyPracticePendingSavesV1";
 
       var routines = [
@@ -1006,6 +1024,179 @@
       var resultsList = document.getElementById("resultsList");
       var saveMessage = document.getElementById("saveMessage");
 
+      var solo = null;
+      var soloPlayer = null;
+      var soloEntry = "";
+      var soloPending = null;
+      var soloNotice = "";
+      var soloSaveText = "";
+      var soloPayload = null;
+      var soloSaving = false;
+      var soloLastSubmit = 0;
+      var soloView = document.getElementById("soloView");
+
+      var legHistoryToken = 0;
+      function loadLegHistory(playerId, before, token) {
+        var box = document.getElementById("legHistory");
+        if (!before) { token = ++legHistoryToken; box.innerHTML = '<p>Loading legs…</p>'; }
+        if (!playerId) { box.innerHTML = '<p>Choose a player to see their legs.</p>'; return; }
+        requestJson('GET', API_URL + '?action=legs&playerId=' + encodeURIComponent(playerId) + (before ? '&before=' + encodeURIComponent(before) : ''), null, function (error, response) {
+          if (token !== legHistoryToken) return;
+          var old = box.querySelector('button'); if (old) old.remove();
+          if (error) {
+            if (!before) box.innerHTML = '';
+            var retry = document.createElement('button'); retry.className = 'view-tab'; retry.textContent = 'Could not load legs — retry';
+            retry.onclick = function () { retry.disabled = true; loadLegHistory(playerId, before, token); }; box.appendChild(retry); return;
+          }
+          if (!before) box.innerHTML = '';
+          box.insertAdjacentHTML('beforeend', renderLegHistory(response.legs || []));
+          if (response.next) {
+            var more = document.createElement('button'); more.className = 'view-tab'; more.textContent = 'Load older legs';
+            more.onclick = function () { more.disabled = true; more.textContent = 'Loading…'; loadLegHistory(playerId, response.next, token); }; box.appendChild(more);
+          }
+        });
+      }
+      function renderLegHistory(legs) {
+        return legs.length ? legs.map(function (row) {
+          return '<article><strong>' + escapeHtml(row.Detail_1) + ' · ' + (Number(row.Detail_2) ? 'Double in' : 'Straight in') + ' · Double out</strong>' +
+            '<p>' + escapeHtml(row.Result_Display) + '</p><p>' + escapeHtml(shortDate(row)) + ' · ' + escapeHtml(row.Detail_4) + ' darts · ' +
+            (Number(row.Detail_3) ? 'Limit ' + escapeHtml(row.Detail_3) : 'Unlimited') +
+            (row.Status === 'DART_LIMIT' ? ' · ' + escapeHtml(row.Progress_Value) + ' remaining' : '') + '</p></article>';
+        }).join('') : '<p>No saved legs yet.</p>';
+      }
+      document.getElementById("seeLegsButton").onclick = function () {
+        var expanded = this.getAttribute("aria-expanded") !== "true";
+        this.setAttribute("aria-expanded", String(expanded));
+        this.textContent = expanded ? "Hide legs" : "See legs";
+        document.getElementById("legHistory").className = "leg-history" + (expanded ? "" : " hidden");
+      };
+      document.getElementById("startSoloButton").onclick = function () {
+        try {
+          if (!selectedPlayer || String(selectedPlayer.playerId) === RESULTS_ONLY_PLAYER_ID) throw new Error("Choose who is training first.");
+          var raw = document.getElementById("soloLimit").value.trim();
+          if (raw && (!/^\d+$/.test(raw) || Number(raw) < 1)) throw new Error("Enter a positive whole dart limit, or leave it blank.");
+          solo = createLeg(Number(document.getElementById("soloStart").value), document.getElementById("soloEntry").value === "double", raw ? Number(raw) : 0);
+          soloPlayer = { playerId: selectedPlayer.playerId, displayName: selectedPlayer.displayName };
+          soloEntry = ""; soloPending = null; soloNotice = ""; soloPayload = null; soloSaveText = ""; soloLastSubmit = 0;
+          document.getElementById("soloSetupError").textContent = "";
+          builderView.className = "hidden"; resultsView.className = "hidden"; soloView.className = "";
+          renderSolo(); window.scrollTo(0, 0);
+        } catch (error) { document.getElementById("soloSetupError").textContent = error.message; }
+      };
+      function soloButton(label, action, cls, disabled) {
+        return '<button type="button" data-solo="' + action + '" class="' + (cls || '') + '"' + (disabled ? ' disabled' : '') + '>' + label + '</button>';
+      }
+      function renderSolo() {
+        if (!solo) return;
+        var ended = solo.status !== "PLAYING";
+        var available = ended ? 0 : visitDarts(solo);
+        var disabled = Boolean(soloPending);
+        var checkout = !ended && solo.opened && [1, 2, 3].some(function (n) { return n <= available && canCheckout(solo.remaining, n); });
+        var html = '<main class="solo-shell"><header class="solo-bar">' + soloButton('← Exit', 'exit') + '<strong>DARTY PRACTICE · ' + solo.start + '</strong><span>Solo 01</span></header>';
+        if (ended) {
+          html += '<section class="solo-end"><p class="eyebrow">' + (solo.status === 'COMPLETE' ? 'Leg complete' : 'Dart limit reached') + '</p><h1>' + escapeHtml(legDisplay(solo)) + '</h1><p>' + escapeHtml(soloPlayer.displayName) + ' · ' + (solo.doubleIn ? 'Double in' : 'Straight in') + ' · Double out</p>' +
+            (solo.remaining ? '<p>' + solo.remaining + ' remaining</p>' : '') + '<p role="status">' + escapeHtml(soloSaveText) + '</p>' +
+            soloButton('Play another leg', 'again', 'next-button', soloSaving) + soloButton('See legs', 'history', 'view-tab', soloSaving) +
+            (soloSaveText.indexOf('Saved to') !== 0 ? soloButton('Retry save', 'retry', 'view-tab', soloSaving) : '') + '</section>';
+        } else {
+          html += '<section class="solo-score"><p>' + escapeHtml(soloPlayer.displayName) + ' · ' + (solo.opened ? 'TO THROW' : 'NOT IN — DOUBLE REQUIRED') + '</p><strong>' + solo.remaining + '</strong><p>' + solo.darts + (solo.limit ? ' / ' + solo.limit : '') + ' darts · ' + (solo.doubleIn ? 'Double in' : 'Straight in') + ' · Double out</p><p>' + (available < 3 ? 'Final visit: ' + available + ' dart' + (available === 1 ? '' : 's') + ' only' : 'Enter your three-dart total') + '</p></section>';
+          html += '<section class="solo-visits" aria-label="Visit history"><div class="solo-row"><span>VISIT</span><span>SCORED</span><span>TO GO</span></div>' + solo.visits.map(function (v, i) { return '<div class="solo-row"><span>' + (i + 1) + '</span><strong>' + (v.isBust ? 'BUST' : v.score) + '</strong><span>' + v.remaining + '</span></div>'; }).join('') + '</section>';
+          html += '<section class="keypad-panel" aria-label="Score keypad"><p class="solo-notice" role="status">' + escapeHtml(soloNotice) + '</p>';
+          if (soloPending) {
+            html += '<div class="decision-bar">';
+            if (soloPending.type === 'in') {
+              html += '<p>Did you double in? Enter only points scored from the opening double onwards.</p>' + soloButton('No double · score 0', 'no-in') + soloButton('Double hit · count ' + soloPending.score, 'yes-in', 'confirm');
+            } else {
+              html += '<p>Checkout ' + soloPending.score + ' — finished on a double? How many darts?</p>' + soloButton('No double · Bust', 'checkout-bust');
+              for (var d = 1; d <= available; d++) html += soloButton(String(d), 'finish-' + d, 'confirm', !canCheckout(soloPending.score, d, soloPending.doubleInHit));
+            }
+            html += soloButton('Change score', 'clear') + '</div>';
+          }
+          html += '<div class="entry-display"><span>YOU SCORED</span><strong aria-live="polite">' + (soloEntry || '—') + '</strong></div><div class="score-pad-layout"><div class="quick-scores" aria-label="Quick scores">';
+          [26, 41, 45].forEach(function (n) { html += soloButton(String(n), 'quick-' + n, '', disabled); });
+          html += '</div><div class="keypad-grid">';
+          for (var n = 1; n <= 9; n++) html += soloButton(String(n), 'digit-' + n, '', disabled);
+          html += soloButton('⌫', 'backspace', 'utility', disabled) + soloButton('0', 'digit-0', '', disabled) + soloButton('ENTER', 'enter', 'enter', disabled || soloEntry === '');
+          html += '</div><div class="quick-scores" aria-label="More quick scores">';
+          [60, 85, 100].forEach(function (n) { html += soloButton(String(n), 'quick-' + n, '', disabled); });
+          html += '</div></div><div class="keypad-tools">' + soloButton('Checkout', 'checkout', 'checkout-tool', disabled || !checkout) + soloButton('Bust', 'bust', 'bust-tool', disabled) + soloButton('Clear', 'clear') + soloButton('↶ Undo', 'undo', '', !solo.visits.length || disabled) + '</div></section>';
+        }
+        soloView.innerHTML = html + '</main>';
+        Array.prototype.forEach.call(soloView.querySelectorAll('[data-solo]'), function (button) { button.onclick = function () { soloAction(button.getAttribute('data-solo')); }; });
+        var history = soloView.querySelector('.solo-visits');
+        if (history) history.scrollTop = history.scrollHeight;
+      }
+      function submitSolo(score, doubleInHit) {
+        if (!solo.opened && score && !doubleInHit) { soloPending = { type: 'in', score: score }; renderSolo(); return; }
+        // Preview through the shared rules before asking for a checkout.
+        submitVisit(solo, { score: score, doubleInHit: Boolean(doubleInHit) });
+        if (score === solo.remaining && (solo.opened || doubleInHit) && [1, 2, 3].some(function (d) { return d <= visitDarts(solo) && canCheckout(score, d, Boolean(doubleInHit)); })) {
+          soloPending = { type: 'out', score: score, doubleInHit: Boolean(doubleInHit) }; renderSolo(); return;
+        }
+        commitSolo({ score: score, doubleInHit: Boolean(doubleInHit) });
+      }
+      function commitSolo(input) {
+        solo = submitVisit(solo, input); soloLastSubmit = Date.now();
+        soloEntry = ''; soloPending = null;
+        soloNotice = solo.visits[solo.visits.length - 1].isBust ? 'Bust — score restored' : '';
+        if (solo.status !== 'PLAYING') {
+          soloPayload = { action: 'saveSession', sessionId: makeId('solo'), playerId: soloPlayer.playerId, trainingDate: localDate(), timeZone: 'Pacific/Auckland', deviceId: getDeviceId(), clientVersion: CLIENT_VERSION,
+            attempts: [{ attemptId: makeId('leg'), routineId: 'solo-x01', status: solo.status, values: { start: solo.start, doubleIn: solo.doubleIn, limit: solo.limit, visits: solo.visits.map(function (v) { return { score: v.score, doubleInHit: v.doubleInHit, checkoutDarts: v.checkoutDarts, bust: v.bust }; }) } }] };
+          queuePendingSave(soloPayload); saveSolo();
+        } else renderSolo();
+      }
+      function saveSolo() {
+        if (!soloPayload || soloSaving) return;
+        var payload = soloPayload;
+        soloSaving = true; soloSaveText = 'Saving leg…'; renderSolo();
+        requestJson('POST', API_URL, payload, function (error, data) {
+          soloSaving = false;
+          if (!error && responseAcceptedAttempt(data, payload.attempts[0].attemptId)) {
+            removePendingSave(payload.attempts[0].attemptId); soloSaveText = 'Saved to your leg history.';
+          } else soloSaveText = 'Not saved to the server yet. Retry when connected. ' + (error ? error.message : 'Save was not confirmed.');
+          if (soloPayload === payload) renderSolo();
+        });
+      }
+      function soloAction(action) {
+        try {
+          if (action === 'exit') {
+            if (solo.status === 'PLAYING' && solo.visits.length && !window.confirm('Leave this leg? This unfinished leg will not be saved.')) return;
+            if (soloSaving) { soloNotice = 'Please wait for the save to finish.'; return; }
+            showTrainingView(); return;
+          }
+          if (action === 'history') { document.getElementById('seeLegsButton').setAttribute('aria-expanded', 'true'); document.getElementById('seeLegsButton').textContent = 'Hide legs'; document.getElementById('legHistory').className = 'leg-history'; showResultsView(); return; }
+          if (action === 'retry') { saveSolo(); return; }
+          if (action === 'again') { solo = createLeg(solo.start, solo.doubleIn, solo.limit); soloEntry = ''; soloNotice = ''; soloPayload = null; soloLastSubmit = 0; renderSolo(); return; }
+          if (solo.status !== 'PLAYING') return;
+          soloNotice = '';
+          if (action === 'clear') { soloEntry = ''; soloPending = null; }
+          else if (action === 'no-in') { commitSolo({ score: 0 }); return; }
+          else if (action === 'yes-in') { submitSolo(soloPending.score, true); return; }
+          else if (action === 'checkout-bust') { commitSolo({ score: soloPending.score, doubleInHit: soloPending.doubleInHit, bust: true }); return; }
+          else if (action.indexOf('finish-') === 0) { commitSolo({ score: soloPending.score, doubleInHit: soloPending.doubleInHit, checkoutDarts: Number(action.slice(7)) }); return; }
+          else if (soloPending) return;
+          else if (action.indexOf('digit-') === 0) { var next = (soloEntry + action.slice(6)).replace(/^0+(?=\d)/, ''); if (next.length <= 3 && Number(next) <= 180) soloEntry = next; }
+          else if (action === 'backspace') soloEntry = soloEntry.slice(0, -1);
+          else if (action === 'undo') {
+            var visits = solo.visits.slice(0, -1);
+            solo = visits.length ? replayLeg(solo.start, solo.doubleIn, solo.limit, visits) : createLeg(solo.start, solo.doubleIn, solo.limit);
+            soloEntry = ''; soloNotice = 'Last visit undone';
+          } else {
+            if (Date.now() - soloLastSubmit < 350) return;
+            if (action === 'bust') { commitSolo({ score: 0, bust: true }); return; }
+            if (action === 'checkout') { submitSolo(solo.remaining, false); return; }
+            if (action === 'enter' && soloEntry !== '') { submitSolo(Number(soloEntry), false); return; }
+            if (action.indexOf('quick-') === 0) { soloEntry = action.slice(6); submitSolo(Number(soloEntry), false); return; }
+          }
+          renderSolo();
+        } catch (error) { soloNotice = error.message; renderSolo(); }
+      }
+      window.addEventListener('keydown', function (event) {
+        if (soloView.classList.contains('hidden') || !solo || solo.status !== 'PLAYING' || event.ctrlKey || event.metaKey || event.altKey) return;
+        var action = /^\d$/.test(event.key) ? 'digit-' + event.key : event.key === 'Backspace' ? 'backspace' : event.key === 'Escape' ? 'clear' : event.key === 'Enter' && !event.repeat ? 'enter' : '';
+        if (action) { event.preventDefault(); soloAction(action); }
+      });
+
       function findRoutine(id) {
         var i;
         for (i = 0; i < routines.length; i += 1) {
@@ -1178,6 +1369,7 @@
       }
 
       function selectResultsPlayer() {
+        legHistoryToken += 1;
         var i;
         var resultsPlayer = null;
         for (i = 0; i < players.length; i += 1) {
@@ -1267,6 +1459,7 @@
       }
 
       function renderResults(data) {
+        loadLegHistory(resultsPlayerSelect.value);
         var categories = ["Scoring", "Doubles", "Checkouts"];
         var html = "";
         var c, i, j, routine, rows, first, last, best, firstValue, lastValue, badge, badgeClass;
@@ -1310,17 +1503,20 @@
       }
 
       function loadResults(playerId) {
+        legHistoryToken += 1;
         var loadToken = resultsLoadToken + 1;
         var playerName = selectedPlayer ? selectedPlayer.displayName : "this player";
         resultsLoadToken = loadToken;
         resultsMessage.innerHTML = "Loading results…";
         resultsList.innerHTML = '<p class="empty">Loading routines…</p>';
+        document.getElementById("legHistory").innerHTML = "Loading legs…";
         requestJson("GET", API_URL + "?action=results&playerId=" + encodeURIComponent(playerId), null, function (error, response) {
           var data;
           if (loadToken !== resultsLoadToken) { return; }
           if (error) {
             resultsMessage.innerHTML = escapeHtml(error.message);
             resultsList.innerHTML = '<p class="empty">Results are unavailable right now.</p>';
+            document.getElementById("legHistory").textContent = "Leg history is unavailable right now. Try again by selecting your name.";
             return;
           }
           data = response.results || [];
@@ -1330,6 +1526,7 @@
       }
 
       function showResultsView() {
+        document.getElementById("soloView").className = "hidden";
         stopTimer();
         builderView.className = "hidden";
         playView.className = "play-screen hidden";
@@ -1346,6 +1543,7 @@
       }
 
       function showTrainingView() {
+        document.getElementById("soloView").className = "hidden";
         resultsView.className = "hidden";
         playView.className = "play-screen hidden";
         builderView.className = "";
