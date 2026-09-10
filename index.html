@@ -454,7 +454,7 @@
       .trend-badge { display: inline-block; margin-top: 8px; }
     }
   </style>
-  <link rel="stylesheet" href="solo.css">
+  <link rel="stylesheet" href="solo.css?v=1.8.1">
 </head>
 <body>
   <div id="builderView">
@@ -607,7 +607,7 @@
 
       var API_URL = "https://darty-practice-api.mattsdarts.workers.dev";
       var RESULTS_ONLY_PLAYER_ID = "646";
-      var CLIENT_VERSION = "1.8.0";
+      var CLIENT_VERSION = "1.8.1";
       var PENDING_SAVES_KEY = "dartyPracticePendingSavesV1";
 
       var routines = [
@@ -1092,7 +1092,7 @@
         var available = ended ? 0 : visitDarts(solo);
         var disabled = Boolean(soloPending);
         var checkout = !ended && solo.opened && [1, 2, 3].some(function (n) { return n <= available && canCheckout(solo.remaining, n); });
-        var html = '<main class="solo-shell"><header class="solo-bar">' + soloButton('← Exit', 'exit') + '<strong>DARTY PRACTICE · ' + solo.start + '</strong><span>Solo 01</span></header>';
+        var html = '<main class="solo-shell' + (ended ? ' solo-complete' : '') + '"><header class="solo-bar">' + soloButton('← Exit', 'exit') + '<div><span>DARTY PRACTICE</span><strong>' + solo.start + ' · Solo 01</strong></div><span>Practice</span></header>';
         if (ended) {
           html += '<section class="solo-end"><p class="eyebrow">' + (solo.status === 'COMPLETE' ? 'Leg complete' : 'Dart limit reached') + '</p><h1>' + escapeHtml(legDisplay(solo)) + '</h1><p>' + escapeHtml(soloPlayer.displayName) + ' · ' + (solo.doubleIn ? 'Double in' : 'Straight in') + ' · Double out</p>' +
             (solo.remaining ? '<p>' + solo.remaining + ' remaining</p>' : '') + '<p role="status">' + escapeHtml(soloSaveText) + '</p>' +
@@ -1101,16 +1101,16 @@
         } else {
           html += '<section class="solo-score"><p>' + escapeHtml(soloPlayer.displayName) + ' · ' + (solo.opened ? 'TO THROW' : 'NOT IN — DOUBLE REQUIRED') + '</p><strong>' + solo.remaining + '</strong><p>' + solo.darts + (solo.limit ? ' / ' + solo.limit : '') + ' darts · ' + (solo.doubleIn ? 'Double in' : 'Straight in') + ' · Double out</p><p>' + (available < 3 ? 'Final visit: ' + available + ' dart' + (available === 1 ? '' : 's') + ' only' : 'Enter your three-dart total') + '</p></section>';
           html += '<section class="solo-visits" aria-label="Visit history"><div class="solo-row"><span>VISIT</span><span>SCORED</span><span>TO GO</span></div>' + solo.visits.map(function (v, i) { return '<div class="solo-row"><span>' + (i + 1) + '</span><strong>' + (v.isBust ? 'BUST' : v.score) + '</strong><span>' + v.remaining + '</span></div>'; }).join('') + '</section>';
-          html += '<section class="keypad-panel" aria-label="Score keypad"><p class="solo-notice" role="status">' + escapeHtml(soloNotice) + '</p>';
+          html += '<section class="keypad-panel' + (soloPending ? ' deciding' : '') + '" aria-label="Score keypad"><p class="solo-notice" role="status">' + escapeHtml(soloNotice) + '</p>';
           if (soloPending) {
-            html += '<div class="decision-bar">';
+            html += '<div class="decision-bar' + (soloPending.type === 'out' ? ' checkout-decision' : '') + '" role="group" aria-label="' + (soloPending.type === 'out' ? 'Confirm checkout' : 'Confirm double in') + '">';
             if (soloPending.type === 'in') {
               html += '<p>Did you double in? Enter only points scored from the opening double onwards.</p>' + soloButton('No double · score 0', 'no-in') + soloButton('Double hit · count ' + soloPending.score, 'yes-in', 'confirm');
             } else {
               html += '<p>Checkout ' + soloPending.score + ' — finished on a double? How many darts?</p>' + soloButton('No double · Bust', 'checkout-bust');
               for (var d = 1; d <= available; d++) html += soloButton(String(d), 'finish-' + d, 'confirm', !canCheckout(soloPending.score, d, soloPending.doubleInHit));
             }
-            html += soloButton('Change score', 'clear') + '</div>';
+            html += soloButton('Change score', 'clear', 'decision-cancel') + '</div>';
           }
           html += '<div class="entry-display"><span>YOU SCORED</span><strong aria-live="polite">' + (soloEntry || '—') + '</strong></div><div class="score-pad-layout"><div class="quick-scores" aria-label="Quick scores">';
           [26, 41, 45].forEach(function (n) { html += soloButton(String(n), 'quick-' + n, '', disabled); });
